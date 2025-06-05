@@ -1,21 +1,31 @@
 import express from "express";
-import mongoose from "mongoose";
-
-const MONGO_URI = "mongodb://localhost:27017/ev-plan";
-
-mongoose.connect(MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-}).then(() => {
-    console.log("Connected to MongoDB");
-}).catch((err) => {
-    console.log("MongoDB connection error: ", err);
-});
+import connectDB from "./core/db.js";
+import eventRoutes from "./routes/events.js";
+import cors from "cors";
 
 const app = express();
 const PORT = 5000;
 
 app.use(express.json());
+app.use(cors({
+    origin: "http://localhost:5173"
+}));
+
+const startServer = async () => {
+    try {
+        await connectDB();
+        console.log("MongoDB verbunden");
+        
+        app.listen(PORT, () => {
+            console.log(`Server läuft auf http://localhost:${PORT}`);
+        });
+    } catch (err) {
+        console.error("Fehler beim Starten des Servers:", err);
+        process.exit(1);
+    }
+};
+
+app.use('/api/events', eventRoutes);
 
 /**
  * @description: This is the root route. It returns a JSON object with a message and status.
@@ -25,12 +35,9 @@ app.use(express.json());
  */
 app.get("/", (req, res) => {
     res.send({
-        message: "Server is running",
-        status: "success",
-        db: mongoose.connection.readyState
-    })
+        message: "Server läuft",
+        status: "success"
+    });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
-});
+startServer();

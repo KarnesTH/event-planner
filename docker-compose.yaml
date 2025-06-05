@@ -8,18 +8,28 @@ services:
     networks:
       - ev-plan-network
     depends_on:
-      - ev-plan-db
+      ev-plan-db:
+        condition: service_healthy
+    restart: unless-stopped
 
   ev-plan-db:
     image: mongo:latest
     ports:
       - 27017:27017
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
-      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=admin
     volumes:
       - ./mongo-data:/data/db
-    restart: always
+    networks:
+      - ev-plan-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
 networks:
   ev-plan-network:
