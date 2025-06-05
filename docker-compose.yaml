@@ -1,0 +1,30 @@
+services:
+  ev-plan-backend:
+    build: ./backend
+    ports:
+      - 5000:5000
+    volumes:
+      - ./backend:/app
+    networks:
+      - ev-plan-network
+    depends_on:
+      - ev-plan-db
+
+  ev-plan-db:
+    image: mongo:latest
+    ports:
+      - 27017:27017
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
+    volumes:
+      - ./mongo-data:/data/db
+    restart: always
+
+networks:
+  ev-plan-network:
+    driver: bridge
+
+volumes:
+  mongo-data:
+    driver: local
