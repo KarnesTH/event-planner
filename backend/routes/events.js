@@ -3,6 +3,12 @@ import Event from '../models/Event.js';
 
 const router = express.Router();
 
+/**
+ * @description: This is the GET route for the events. It is used to get all events.
+ * @param {Object} req - The request object.
+ * @param {Object} res - The response object.
+ * @returns {Promise<void>} - A promise that resolves when the events are fetched.
+ */
 router.get('/', async (req, res) => {
     try {
         const events = await Event.find().sort({ date: 1 });
@@ -15,6 +21,12 @@ router.get('/', async (req, res) => {
     }
 });
 
+/**
+ * @description: This is the POST route for the events. It is used to create a new event.
+ * @param {Object} req - The request object.
+ * @param {Object} res - The response object.
+ * @returns {Promise<void>} - A promise that resolves when the event is created.
+ */
 router.post('/', async (req, res) => {
     try {
         const event = new Event(req.body);
@@ -28,6 +40,12 @@ router.post('/', async (req, res) => {
     }
 });
 
+/**
+ * @description: This is the GET route for the event by id. It is used to get an event by id.
+ * @param {Object} req - The request object.
+ * @param {Object} res - The response object.
+ * @returns {Promise<void>} - A promise that resolves when the event is fetched.
+ */
 router.get('/:id', async (req, res) => {
     try {
         const event = await Event.findById(req.params.id);

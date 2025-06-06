@@ -5,6 +5,8 @@ services:
       - 5000:5000
     volumes:
       - ./backend:/app
+    environment:
+      - MONGO_URI=mongodb://admin:admin@ev-plan-db:27017/event-planner?authSource=admin
     networks:
       - ev-plan-network
     depends_on:

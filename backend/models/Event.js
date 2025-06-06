@@ -1,5 +1,9 @@
 import mongoose from 'mongoose';
 
+/**
+ * @description: This is the event schema. It is used to create a new event.
+ * @returns {Object} - A mongoose schema object.
+ */
 const eventSchema = new mongoose.Schema({
     title: {
         type: String,
