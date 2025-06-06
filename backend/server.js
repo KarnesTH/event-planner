@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
 import eventRoutes from './routes/events.js';
+import authRoutes from './routes/auth.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -12,6 +13,7 @@ app.use(express.json());
 
 // Routes
 app.use('/api/v1/events', eventRoutes);
+app.use('/api/v1/auth', authRoutes);
 
 // Root Route
 app.get('/', (req, res) => {
