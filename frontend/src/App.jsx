@@ -2,8 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import Navbar from './components/navbar/Navbar'
-import Hero from './components/hero/Hero'
-import EventList from './components/eventlist/EventList'
+import Home from './components/home/Home'
 import EventsPage from './components/events/EventsPage'
 import AboutPage from './components/about/AboutPage'
 import Login from './components/auth/Login'
@@ -11,6 +10,7 @@ import Register from './components/auth/Register'
 import EventDetail from './components/eventdetail/EventDetail'
 import Dashboard from './components/dashboard/Dashboard'
 import Profile from './components/profile/Profile'
+import Settings from './components/settings/Settings'
 import Footer from './components/footer/Footer'
 
 function App() {
@@ -22,12 +22,7 @@ function App() {
           <main className="flex-grow">
             <Routes>
               {/* Public Routes */}
-              <Route path="/" element={
-                <>
-                  <Hero />
-                  <EventList />
-                </>
-              } />
+              <Route path="/" element={<Home />} />
               <Route path="/events" element={<EventsPage />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/login" element={<Login />} />
@@ -48,6 +43,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Profile />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/settings"
+                element={
+                  <ProtectedRoute>
+                    <Settings />
                   </ProtectedRoute>
                 }
               />

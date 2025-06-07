@@ -18,22 +18,32 @@ const EventsPage = () => {
   const fetchEvents = async () => {
     try {
       setLoading(true)
-      const queryParams = new URLSearchParams({
-        ...filters,
-        search: filters.search || undefined,
-        category: filters.category || undefined,
-        date: filters.date || undefined
-      }).toString()
+      setError(null)
 
-      const response = await fetch(`/api/events?${queryParams}`)
-      if (!response.ok) throw new Error('Fehler beim Laden der Events')
+      // Baue die Query-Parameter
+      const queryParams = new URLSearchParams()
+      if (filters.search) queryParams.append('search', filters.search)
+      if (filters.category) queryParams.append('category', filters.category)
+      if (filters.date) queryParams.append('date', filters.date)
+
+      const response = await fetch(`http://localhost:5000/api/v1/events?${queryParams.toString()}`, {
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.message || 'Fehler beim Laden der Events')
+      }
       
       const data = await response.json()
       setEvents(data)
-      setError(null)
     } catch (err) {
-      setError('Events konnten nicht geladen werden')
       console.error('Fehler beim Laden der Events:', err)
+      setError(err.message || 'Events konnten nicht geladen werden')
+      setEvents([])
     } finally {
       setLoading(false)
     }
@@ -135,8 +145,14 @@ const EventsPage = () => {
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
             </div>
           ) : error ? (
-            <div className="text-center text-red-600 py-8">
-              {error}
+            <div className="text-center py-8">
+              <div className="text-red-600 mb-2">{error}</div>
+              <button
+                onClick={fetchEvents}
+                className="text-blue-600 hover:text-blue-800 font-medium"
+              >
+                Erneut versuchen
+              </button>
             </div>
           ) : events.length === 0 ? (
             <div className="text-center text-gray-600 py-8">

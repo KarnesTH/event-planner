@@ -34,8 +34,15 @@ const eventSchema = new mongoose.Schema({
             country: String
         },
         coordinates: {
-            lat: Number,
-            lng: Number
+            type: {
+                type: String,
+                enum: ['Point'],
+                default: 'Point'
+            },
+            coordinates: {
+                type: [Number], // [longitude, latitude]
+                required: true
+            }
         }
     },
     category: {
@@ -88,6 +95,7 @@ const eventSchema = new mongoose.Schema({
 eventSchema.index({ title: 'text', description: 'text', tags: 'text' });
 eventSchema.index({ date: 1, status: 1 });
 eventSchema.index({ category: 1, status: 1 });
+eventSchema.index({ 'location.coordinates': '2dsphere' });
 
 const Event = mongoose.model('Event', eventSchema);
 
