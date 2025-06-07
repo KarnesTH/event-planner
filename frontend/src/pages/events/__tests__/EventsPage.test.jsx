@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
-import { AuthProvider } from '../../../src/context/AuthContext';
 import EventsPage from '../EventsPage';
+import { AuthProvider } from '../../../context/AuthContext';
 
 describe('EventsPage', () => {
   const mockEvents = [
@@ -52,7 +52,7 @@ describe('EventsPage', () => {
     });
 
     mockFetchNearbyEvents.mockImplementation(async ({ searchTerm, category }) => {
-      let filteredEvents = [mockEvents[0]]; // Nur das erste Event als "in der Nähe"
+      let filteredEvents = [mockEvents[0]];
       
       if (searchTerm) {
         filteredEvents = filteredEvents.filter(event => 
