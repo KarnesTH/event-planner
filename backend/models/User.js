@@ -9,9 +9,19 @@ import bcrypt from 'bcryptjs';
  * @throws {Error} - An error if the user is not authenticated.
  */
 const userSchema = new mongoose.Schema({
+    firstName: {
+        type: String,
+        required: true,
+        trim: true
+    },
+    lastName: {
+        type: String,
+        required: true,
+        trim: true
+    },
     email: {
         type: String,
-        required: [true, 'Email ist erforderlich'],
+        required: true,
         unique: true,
         trim: true,
         lowercase: true,
@@ -19,18 +29,54 @@ const userSchema = new mongoose.Schema({
     },
     password: {
         type: String,
-        required: [true, 'Passwort ist erforderlich'],
+        required: true,
         minlength: [8, 'Passwort muss mindestens 8 Zeichen lang sein']
     },
-    name: {
+    avatar: {
         type: String,
-        required: [true, 'Name ist erforderlich'],
-        trim: true
+        default: '/placeholder-avatar.jpg'
+    },
+    bio: {
+        type: String,
+        maxlength: 500
     },
     role: {
         type: String,
-        enum: ['user', 'admin'],
+        enum: ['user', 'moderator', 'admin'],
         default: 'user'
+    },
+    interests: [{
+        type: String,
+        trim: true
+    }],
+    location: {
+        city: String,
+        country: String
+    },
+    socialLinks: {
+        website: String,
+        twitter: String,
+        instagram: String,
+        linkedin: String
+    },
+    createdEvents: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Event'
+    }],
+    participatingEvents: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Event'
+    }],
+    savedEvents: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Event'
+    }],
+    isVerified: {
+        type: Boolean,
+        default: false
+    },
+    lastLogin: {
+        type: Date
     }
 }, {
     timestamps: true
@@ -72,8 +118,17 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
 userSchema.methods.toJSON = function() {
     const user = this.toObject();
     delete user.password;
+    delete user.__v;
     return user;
 };
+
+/**
+ * @description: This is the virtual property to get the full name.
+ * @returns {String} - The full name of the user.
+ */
+userSchema.virtual('fullName').get(function() {
+    return `${this.firstName} ${this.lastName}`;
+});
 
 const User = mongoose.model('User', userSchema);
 

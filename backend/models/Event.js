@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import mongoose from 'mongoose'
 
 /**
  * @description: This is the event schema. It is used to create a new event.
@@ -7,34 +7,72 @@ import mongoose from 'mongoose';
 const eventSchema = new mongoose.Schema({
     title: {
         type: String,
-        required: [true, 'Ein Titel ist erforderlich'],
+        required: true,
         trim: true
     },
     description: {
         type: String,
-        trim: true
+        required: true
     },
     date: {
         type: Date,
-        required: [true, 'Ein Datum ist erforderlich']
+        required: true
+    },
+    endDate: {
+        type: Date,
+        required: true
     },
     location: {
-        type: String,
-        required: [true, 'Ein Ort ist erforderlich'],
-        trim: true
+        name: {
+            type: String,
+            required: true
+        },
+        address: {
+            street: String,
+            city: String,
+            postalCode: String,
+            country: String
+        },
+        coordinates: {
+            lat: Number,
+            lng: Number
+        }
     },
-    maxParticipants: {
-        type: Number,
-        min: 1
+    category: {
+        type: String,
+        required: true,
+        enum: ['Konzert', 'Workshop', 'Networking', 'Sport', 'Kultur', 'Andere']
+    },
+    imageUrl: {
+        type: String,
+        default: '/placeholder-event.jpg'
+    },
+    organizer: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
     },
     participants: [{
-        name: String,
-        email: String,
-        registeredAt: {
-            type: Date,
-            default: Date.now
-        }
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
     }],
+    maxParticipants: {
+        type: Number,
+        default: null // null bedeutet unbegrenzt
+    },
+    tags: [{
+        type: String,
+        trim: true
+    }],
+    status: {
+        type: String,
+        enum: ['draft', 'published', 'cancelled', 'completed'],
+        default: 'draft'
+    },
+    isPublic: {
+        type: Boolean,
+        default: true
+    },
     createdAt: {
         type: Date,
         default: Date.now
@@ -43,13 +81,14 @@ const eventSchema = new mongoose.Schema({
         type: Date,
         default: Date.now
     }
+}, {
+    timestamps: true
 });
 
-eventSchema.pre('save', function(next) {
-    this.updatedAt = Date.now();
-    next();
-});
+eventSchema.index({ title: 'text', description: 'text', tags: 'text' });
+eventSchema.index({ date: 1, status: 1 });
+eventSchema.index({ category: 1, status: 1 });
 
 const Event = mongoose.model('Event', eventSchema);
 
-export default Event; 
+module.exports = Event; 
