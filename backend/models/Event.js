@@ -91,4 +91,4 @@ eventSchema.index({ category: 1, status: 1 });
 
 const Event = mongoose.model('Event', eventSchema);
 
-module.exports = Event; 
+export default Event; 

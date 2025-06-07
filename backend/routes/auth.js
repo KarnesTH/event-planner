@@ -1,6 +1,7 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import Event from '../models/Event.js';
 
 const router = express.Router();
 
@@ -13,7 +14,14 @@ const router = express.Router();
  */
 router.post('/register', async (req, res) => {
     try {
-        const { email, password, name } = req.body;
+        const { email, password, firstName, lastName } = req.body;
+
+        // Validiere erforderliche Felder
+        if (!email || !password || !firstName || !lastName) {
+            return res.status(400).json({ 
+                error: 'Alle Felder sind erforderlich' 
+            });
+        }
 
         const existingUser = await User.findOne({ email });
         if (existingUser) {
@@ -22,7 +30,12 @@ router.post('/register', async (req, res) => {
             });
         }
 
-        const user = await User.create({ email, password, name });
+        const user = await User.create({ 
+            email, 
+            password, 
+            firstName, 
+            lastName 
+        });
         
         const token = jwt.sign(
             { userId: user._id },
@@ -90,10 +103,10 @@ router.post('/login', async (req, res) => {
 });
 
 /**
- * @description: This is the route to get the current user.
+ * @description: This is the route to get the current user with their events.
  * @param {Object} req - The request object.
  * @param {Object} res - The response object.
- * @returns {Promise<void>} - A promise that resolves when the user is returned.
+ * @returns {Promise<void>} - A promise that resolves when the user and their events are returned.
  * @throws {Error} - An error if the user is not returned.
  */
 router.get('/me', async (req, res) => {
@@ -110,7 +123,23 @@ router.get('/me', async (req, res) => {
             return res.status(404).json({ error: 'Benutzer nicht gefunden' });
         }
 
-        res.json({ user: user.toJSON() });
+        // Hole Events des Benutzers (organisierte und teilgenommene)
+        const [organizedEvents, participatingEvents] = await Promise.all([
+            Event.find({ organizer: user._id })
+                .sort({ date: 1 })
+                .populate('organizer', 'firstName lastName email'),
+            Event.find({ participants: user._id })
+                .sort({ date: 1 })
+                .populate('organizer', 'firstName lastName email')
+        ]);
+
+        res.json({
+            user: user.toJSON(),
+            events: {
+                organized: organizedEvents,
+                participating: participatingEvents
+            }
+        });
     } catch (err) {
         if (err.name === 'JsonWebTokenError') {
             return res.status(401).json({ error: 'Ungültiger Token' });

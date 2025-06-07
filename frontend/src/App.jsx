@@ -10,6 +10,7 @@ import Login from './components/auth/Login'
 import Register from './components/auth/Register'
 import EventDetail from './components/eventdetail/EventDetail'
 import Dashboard from './components/dashboard/Dashboard'
+import Profile from './components/profile/Profile'
 import Footer from './components/footer/Footer'
 
 function App() {
@@ -39,6 +40,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Dashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute>
+                    <Profile />
                   </ProtectedRoute>
                 }
               />

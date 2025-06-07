@@ -1,6 +1,9 @@
 import { useState } from 'react'
+import { useAuth } from '../../context/AuthContext'
+import { Link } from 'react-router-dom'
 
 const Register = () => {
+  const { register } = useAuth()
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -11,14 +14,27 @@ const Register = () => {
   })
 
   const [errors, setErrors] = useState({})
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState('')
 
   const validateForm = () => {
     const newErrors = {}
-    if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Die Passwörter stimmen nicht überein'
+    if (!formData.firstName.trim()) {
+      newErrors.firstName = 'Vorname ist erforderlich'
+    }
+    if (!formData.lastName.trim()) {
+      newErrors.lastName = 'Nachname ist erforderlich'
+    }
+    if (!formData.email.trim()) {
+      newErrors.email = 'E-Mail ist erforderlich'
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Bitte geben Sie eine gültige E-Mail-Adresse ein'
     }
     if (formData.password.length < 8) {
       newErrors.password = 'Das Passwort muss mindestens 8 Zeichen lang sein'
+    }
+    if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Die Passwörter stimmen nicht überein'
     }
     if (!formData.acceptTerms) {
       newErrors.acceptTerms = 'Bitte akzeptiere die Nutzungsbedingungen'
@@ -27,11 +43,27 @@ const Register = () => {
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    if (validateForm()) {
-      // TODO: Implementiere Registrierungs-Logik
-      console.log('Register attempt:', formData)
+    setSubmitError('')
+    
+    if (!validateForm()) {
+      return
+    }
+
+    setIsSubmitting(true)
+    try {
+      const { confirmPassword, acceptTerms, ...registerData } = formData
+      const result = await register(registerData)
+      
+      if (!result.success) {
+        setSubmitError(result.error || 'Registrierung fehlgeschlagen')
+      }
+    } catch (error) {
+      setSubmitError('Ein unerwarteter Fehler ist aufgetreten')
+      console.error('Registrierungs-Fehler:', error)
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -41,7 +73,7 @@ const Register = () => {
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }))
-    // Lösche Fehler beim Ändern
+
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: undefined }))
     }
@@ -55,14 +87,20 @@ const Register = () => {
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600">
           Oder{' '}
-          <a href="/login" className="font-medium text-blue-600 hover:text-blue-500">
+          <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500">
             melde dich mit deinem bestehenden Konto an
-          </a>
+          </Link>
         </p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+          {submitError && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+              <p className="text-sm text-red-600">{submitError}</p>
+            </div>
+          )}
+          
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -191,9 +229,14 @@ const Register = () => {
             <div>
               <button
                 type="submit"
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                disabled={isSubmitting}
+                className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
+                  isSubmitting 
+                    ? 'bg-blue-400 cursor-not-allowed' 
+                    : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
+                }`}
               >
-                Registrieren
+                {isSubmitting ? 'Registriere...' : 'Registrieren'}
               </button>
             </div>
           </form>

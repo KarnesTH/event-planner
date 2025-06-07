@@ -1,8 +1,11 @@
 import express from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
+import dotenv from 'dotenv';
 import eventRoutes from './routes/events.js';
 import authRoutes from './routes/auth.js';
+
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -21,7 +24,22 @@ app.get('/', (req, res) => {
         message: 'Server läuft',
         status: 'success',
         version: '1.0.0',
-        db: mongoose.connection.readyState === 1 ? 'verbunden' : 'getrennt'
+        db: mongoose.connection.readyState === 1 ? 'verbunden' : 'getrennt',
+        env: {
+            hasMongoUri: !!process.env.MONGO_URI,
+            hasJwtSecret: !!process.env.JWT_SECRET,
+            nodeEnv: process.env.NODE_ENV
+        }
+    });
+});
+
+// Error Handling Middleware
+app.use((err, req, res, next) => {
+    console.error('Server Error:', err);
+    res.status(500).json({
+        error: 'Interner Serverfehler',
+        message: err.message,
+        stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
     });
 });
 
@@ -33,11 +51,14 @@ app.get('/', (req, res) => {
 const connectDB = async () => {
     const MONGO_URI = process.env.MONGO_URI;
     if (!MONGO_URI) {
-        throw new Error('MONGO_URI ist nicht definiert');
+        throw new Error('MONGO_URI ist nicht definiert in der .env Datei');
     }
 
     try {
-        await mongoose.connect(MONGO_URI);
+        await mongoose.connect(MONGO_URI, {
+            serverSelectionTimeoutMS: 5000,
+            socketTimeoutMS: 45000,
+        });
         console.log('MongoDB verbunden');
     } catch (err) {
         console.error('MongoDB Verbindungsfehler:', err);
@@ -52,16 +73,19 @@ const connectDB = async () => {
  */
 const startServer = async () => {
     try {
+        if (!process.env.JWT_SECRET) {
+            throw new Error('JWT_SECRET ist nicht definiert in der .env Datei');
+        }
+
         await connectDB();
         app.listen(PORT, () => {
             console.log(`Server läuft auf http://localhost:${PORT}`);
         });
     } catch (err) {
         console.error('Fehler beim Starten des Servers:', err);
-        throw err;
+        process.exit(1);
     }
 };
-
 
 if (import.meta.url === `file://${process.argv[1]}`) {
     startServer();
