@@ -1,12 +1,12 @@
 import { Link } from 'react-router-dom'
 import { useState } from 'react'
-import { useAuth } from '../../context/AuthContext'
 
-const EventCard = ({ event }) => {
-  const { user } = useAuth()
-  const [isParticipating, setIsParticipating] = useState(event.participants?.includes(user?._id))
+const EventCard = ({ event, currentUserId, onParticipate }) => {
+  const [isParticipating, setIsParticipating] = useState(event.participants?.includes(currentUserId))
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
+
+  const isOwnEvent = event.organizer?._id === currentUserId
 
   const formatDate = (dateString) => {
     const date = new Date(dateString)
@@ -27,8 +27,7 @@ const EventCard = ({ event }) => {
     e.preventDefault()
     e.stopPropagation()
     
-    if (!user) {
-      // Wenn nicht eingeloggt, zur Login-Seite weiterleiten
+    if (!currentUserId) {
       window.location.href = '/login'
       return
     }
@@ -37,22 +36,10 @@ const EventCard = ({ event }) => {
     setError(null)
 
     try {
-      const token = localStorage.getItem('token')
-      const method = isParticipating ? 'DELETE' : 'POST'
-      const response = await fetch(`http://localhost:5000/api/v1/events/${event._id}/participate`, {
-        method,
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || 'Fehler bei der Teilnahme')
+      if (onParticipate) {
+        await onParticipate(event._id, !isParticipating)
+        setIsParticipating(!isParticipating)
       }
-
-      setIsParticipating(!isParticipating)
     } catch (err) {
       console.error('Fehler bei der Teilnahme:', err)
       setError(err.message)
@@ -149,12 +136,16 @@ const EventCard = ({ event }) => {
           {event.status === 'published' && (
             <button 
               onClick={handleParticipate}
-              disabled={isLoading || event.organizer?._id === user?._id}
+              disabled={isLoading || isOwnEvent}
               className={`flex items-center space-x-1 px-3 py-1 rounded-md text-sm font-medium transition-colors ${
                 isParticipating
                   ? 'bg-red-100 text-red-700 hover:bg-red-200'
                   : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
               } disabled:opacity-50 disabled:cursor-not-allowed`}
+              data-testid="participate-button"
+              data-organizer-id={event.organizer?._id}
+              data-user-id={currentUserId}
+              data-is-disabled={isLoading || isOwnEvent}
             >
               {isLoading ? (
                 <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full"></div>

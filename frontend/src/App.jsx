@@ -2,18 +2,22 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import Navbar from './components/navbar/Navbar'
-import Home from './components/home/Home'
-import EventsPage from './components/events/EventsPage'
-import AboutPage from './components/about/AboutPage'
-import Login from './components/auth/Login'
-import Register from './components/auth/Register'
+import Home from './pages/home/Home'
+import EventsPage from './pages/events/EventsPage'
+import AboutPage from './pages/about/AboutPage'
+import Login from './pages/login/Login'
+import Register from './pages/register/Register'
 import EventDetail from './components/eventdetail/EventDetail'
-import Dashboard from './components/dashboard/Dashboard'
-import Profile from './components/profile/Profile'
-import Settings from './components/settings/Settings'
+import Dashboard from './pages/dashboard/Dashboard'
+import Profile from './pages/profile/Profile'
+import Settings from './pages/settings/Settings'
 import Footer from './components/footer/Footer'
 
-function App() {
+/**
+ * Main App component
+ * @returns {JSX.Element}
+ */
+const App = () => {
   return (
     <Router>
       <AuthProvider>

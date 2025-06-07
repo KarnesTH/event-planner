@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import Hero from '../hero/Hero'
-import EventList from '../eventlist/EventList'
+import Hero from '../../components/hero/Hero'
+import EventList from '../../components/eventlist/EventList'
 
 const Home = () => {
   const [showNearbyEvents, setShowNearbyEvents] = useState(false)
