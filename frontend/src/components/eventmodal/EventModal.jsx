@@ -49,10 +49,9 @@ const EventModal = ({ event, onClose, onSubmit, isEdit = false }) => {
         }
     }, [event]);
 
-    // Geocoding-Funktion
     const geocodeAddress = async () => {
         const { street, city, postalCode, country } = formData.location.address;
-        if (!city) return; // Mindestens Stadt ist erforderlich
+        if (!city) return;
 
         setIsGeocoding(true);
         try {
@@ -101,7 +100,6 @@ const EventModal = ({ event, onClose, onSubmit, isEdit = false }) => {
         }
     };
 
-    // Geocoding bei Adressänderungen
     useEffect(() => {
         const { street, city, postalCode } = formData.location.address;
         if (city && (street || postalCode)) {
@@ -194,69 +192,130 @@ const EventModal = ({ event, onClose, onSubmit, isEdit = false }) => {
                 await new Promise(resolve => setTimeout(resolve, 1000));
             }
 
-            // Bereite die Daten für das Backend vor
             const submitData = {
                 ...formData,
                 maxParticipants: formData.maxParticipants === "" ? null : Number(formData.maxParticipants),
                 location: {
                     ...formData.location,
-                    coordinates: {
+                    coordinates: formData.location.coordinates.coordinates[0] !== 0 ? {
                         lat: formData.location.coordinates.coordinates[1],
                         lng: formData.location.coordinates.coordinates[0]
-                    }
+                    } : undefined
                 }
             };
 
-            // Entferne leere Adressfelder
             if (!submitData.location.address.street) delete submitData.location.address.street;
             if (!submitData.location.address.city) delete submitData.location.address.city;
             if (!submitData.location.address.postalCode) delete submitData.location.address.postalCode;
             if (!submitData.location.address.country) delete submitData.location.address.country;
 
-            // Entferne die Koordinaten, wenn sie nicht gültig sind
-            if (isNaN(submitData.location.coordinates.lat) || isNaN(submitData.location.coordinates.lng)) {
+            if (!submitData.location.coordinates?.lat || !submitData.location.coordinates?.lng ||
+                isNaN(submitData.location.coordinates.lat) || isNaN(submitData.location.coordinates.lng)) {
                 delete submitData.location.coordinates;
             }
 
             await onSubmit(submitData);
             onClose();
-            if (!isEdit) {
-                navigate("/events");
-            }
         } catch (error) {
             setErrors({ submit: error.message });
         }
     };
 
-    const handleImageChange = (e) => {
+    const handleImageChange = async (e) => {
         const file = e.target.files?.[0];
-        if (file) {
-            if (file.size > 5 * 1024 * 1024) { // 5MB
+        if (!file) return;
+
+        if (file.size > 5 * 1024 * 1024) { // 5MB
+            setErrors(prev => ({
+                ...prev,
+                image: 'Bild darf nicht größer als 5MB sein'
+            }));
+            return;
+        }
+
+        if (!file.type.startsWith('image/')) {
+            setErrors(prev => ({
+                ...prev,
+                image: 'Nur Bilddateien sind erlaubt'
+            }));
+            return;
+        }
+
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) {
                 setErrors(prev => ({
                     ...prev,
-                    image: 'Bild darf nicht größer als 5MB sein'
+                    image: 'Bitte melden Sie sich an, um Bilder hochzuladen'
                 }));
                 return;
             }
 
-            if (!file.type.startsWith('image/')) {
-                setErrors(prev => ({
-                    ...prev,
-                    image: 'Nur Bilddateien sind erlaubt'
-                }));
-                return;
+            const formData = new FormData();
+            formData.append('image', file);
+
+            const response = await fetch('http://localhost:5000/api/v1/upload', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                body: formData
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Fehler beim Hochladen des Bildes');
             }
 
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setImagePreview(reader.result);
-                setFormData(prev => ({
-                    ...prev,
-                    imageUrl: reader.result
-                }));
-            };
-            reader.readAsDataURL(file);
+            const data = await response.json();
+            
+            // Setze die URL des hochgeladenen Bildes
+            setImagePreview(`http://localhost:5000${data.url}`);
+            setFormData(prev => ({
+                ...prev,
+                imageUrl: data.url
+            }));
             setErrors(prev => ({ ...prev, image: null }));
+        } catch (err) {
+            console.error('Upload-Fehler:', err);
+            setErrors(prev => ({
+                ...prev,
+                image: err.message || 'Fehler beim Hochladen des Bildes'
+            }));
+        }
+    };
+
+    const handleRemoveImage = async () => {
+        try {
+            const currentImageUrl = formData.imageUrl;
+            if (currentImageUrl && currentImageUrl !== '/placeholder-event.jpg') {
+                const filename = currentImageUrl.split('/').pop();
+                const token = localStorage.getItem('token');
+                
+                if (token) {
+                    await fetch(`http://localhost:5000/api/v1/upload/${filename}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+                }
+            }
+
+            setImagePreview(null);
+            setFormData(prev => ({
+                ...prev,
+                imageUrl: '/placeholder-event.jpg'
+            }));
+            if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+            }
+        } catch (err) {
+            console.error('Fehler beim Löschen des Bildes:', err);
+            setErrors(prev => ({
+                ...prev,
+                image: 'Fehler beim Löschen des Bildes'
+            }));
         }
     };
 
@@ -331,22 +390,13 @@ const EventModal = ({ event, onClose, onSubmit, isEdit = false }) => {
                                 {imagePreview ? (
                                     <div className="relative">
                                         <img
-                                            src={imagePreview}
+                                            src={imagePreview.startsWith('http') ? imagePreview : `http://localhost:5000${imagePreview}`}
                                             alt="Vorschau"
                                             className="mx-auto max-h-48 rounded-lg"
                                         />
                                         <button
                                             type="button"
-                                            onClick={() => {
-                                                setImagePreview(null);
-                                                setFormData(prev => ({
-                                                    ...prev,
-                                                    imageUrl: '/placeholder-event.jpg'
-                                                }));
-                                                if (fileInputRef.current) {
-                                                    fileInputRef.current.value = '';
-                                                }
-                                            }}
+                                            onClick={handleRemoveImage}
                                             className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
                                         >
                                             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

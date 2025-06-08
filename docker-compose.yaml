@@ -4,7 +4,7 @@ services:
     ports:
       - 5000:5000
     volumes:
-      - ./backend:/app
+      - ./backend-uploads:/app/public/uploads
     environment:
       - MONGO_URI=mongodb://admin:admin@ev-plan-db:27017/event-planner?authSource=admin
     networks:
@@ -39,4 +39,6 @@ networks:
 
 volumes:
   mongo-data:
+    driver: local
+  backend-uploads:
     driver: local

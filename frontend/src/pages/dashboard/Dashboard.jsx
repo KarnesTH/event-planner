@@ -79,6 +79,24 @@ const Dashboard = () => {
     }
   }
 
+  const handleUpdateEvent = async (updatedEvent) => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) throw new Error('Nicht angemeldet')
+
+      const updatedUserData = await fetch('http://localhost:5000/api/v1/auth/me', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }).then(res => res.json())
+
+      setUserData(updatedUserData)
+    } catch (err) {
+      console.error('Fehler beim Aktualisieren der Events:', err)
+    }
+  }
+
   const renderOverview = () => {
     if (!userData?.events) return null
     const { organized, participating } = userData.events
@@ -117,7 +135,8 @@ const Dashboard = () => {
             <EventCard 
               key={event._id} 
               event={event}
-              currentUserId={user?._id}
+              onUpdate={handleUpdateEvent}
+              onDelete={handleUpdateEvent}
             />
           ))}
         </div>

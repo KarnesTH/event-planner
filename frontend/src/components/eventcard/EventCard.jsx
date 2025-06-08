@@ -9,7 +9,6 @@ const EventCard = ({ event, onDelete, onUpdate }) => {
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
-  // Token-basierte Benutzererkennung
   useEffect(() => {
     const token = localStorage.getItem('token')
     if (!token) {
@@ -40,7 +39,6 @@ const EventCard = ({ event, onDelete, onUpdate }) => {
     })
   }, [])
 
-  // Organizer-Erkennung
   const isOrganizer = (() => {
     const organizerId = typeof event.organizer === 'object' ? event.organizer._id : event.organizer
     return Boolean(currentUserId && organizerId && currentUserId === organizerId)
@@ -135,14 +133,34 @@ const EventCard = ({ event, onDelete, onUpdate }) => {
     }
 
     try {
-      console.log('Sende Update-Request mit Daten:', updatedEventData)
+      const { 
+        _id, 
+        organizer, 
+        participants, 
+        createdAt, 
+        updatedAt, 
+        __v,
+        ...restData 
+      } = updatedEventData
+
+      const cleanedLocation = restData.location ? {
+        name: restData.location.name,
+        address: restData.location.address,
+        coordinates: restData.location.coordinates
+      } : undefined
+
+      const updateData = {
+        ...restData,
+        location: cleanedLocation
+      }
+
       const response = await fetch(`http://localhost:5000/api/v1/events/${event._id}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(updatedEventData)
+        body: JSON.stringify(updateData)
       })
 
       const data = await response.json()
@@ -155,16 +173,12 @@ const EventCard = ({ event, onDelete, onUpdate }) => {
       }
 
       if (!response.ok) {
-        throw new Error(
-          data.message || 
-          (data.invalidFields ? `Ungültige Felder: ${data.invalidFields.join(', ')}` : 'Event konnte nicht aktualisiert werden')
-        )
+        throw new Error(data.message || 'Event konnte nicht aktualisiert werden')
       }
 
       onUpdate?.(data)
       setShowEditModal(false)
     } catch (err) {
-      console.error('Fehler beim Aktualisieren:', err)
       alert(err.message)
     }
   }

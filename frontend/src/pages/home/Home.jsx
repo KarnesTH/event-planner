@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Hero from '../../components/hero/Hero'
 import EventList from '../../components/eventlist/EventList'
 
@@ -6,8 +6,29 @@ import EventList from '../../components/eventlist/EventList'
  * @description: This is the Home component.
  * @returns {JSX.Element}
  */
-const Home = () => {
+const Home = ({ fetchEvents, fetchNearbyEvents }) => {
+  const [events, setEvents] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [showNearbyEvents, setShowNearbyEvents] = useState(false)
+
+  const loadEvents = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const data = await (showNearbyEvents ? fetchNearbyEvents : fetchEvents)({})
+      setEvents(data)
+    } catch (err) {
+      setError(err.message)
+      setEvents([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadEvents()
+  }, [showNearbyEvents])
 
   return (
     <div>
@@ -40,7 +61,12 @@ const Home = () => {
             {showNearbyEvents ? 'Alle Events anzeigen' : 'Events in meiner Nähe'}
           </button>
         </div>
-        <EventList showNearbyEvents={showNearbyEvents} />
+        <EventList 
+          events={events}
+          loading={loading}
+          error={error}
+          locationError={showNearbyEvents && !localStorage.getItem('token') ? 'Bitte melden Sie sich an, um Events in Ihrer Nähe zu sehen' : null}
+        />
       </div>
     </div>
   )

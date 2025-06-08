@@ -4,6 +4,12 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import eventRoutes from './routes/events.js';
 import authRoutes from './routes/auth.js';
+import uploadRoutes from './routes/upload.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 dotenv.config();
 
@@ -17,6 +23,10 @@ app.use(express.json());
 // Routes
 app.use('/api/v1/events', eventRoutes);
 app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/upload', uploadRoutes);
+
+// Statische Dateien
+app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 
 // Root Route
 app.get('/', (req, res) => {
