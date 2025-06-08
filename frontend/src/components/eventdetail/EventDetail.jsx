@@ -1,46 +1,146 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Link, useParams, useNavigate } from 'react-router-dom'
 
-const EventDetail = ({ event }) => {
+const EventDetail = () => {
+  const { id } = useParams()
+  const navigate = useNavigate()
+  const [event, setEvent] = useState(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [isParticipating, setIsParticipating] = useState(false)
   const [isSaved, setIsSaved] = useState(false)
+  const [mapUrl, setMapUrl] = useState('')
+  const [currentUser, setCurrentUser] = useState(null)
 
-  // Beispiel-Event für die Vorschau
-  const sampleEvent = {
-    _id: 1,
-    title: "Sommerfestival 2024",
-    description: "Das größte Sommerfestival in Berlin! Genieße Live-Musik, Street Food und eine unvergessliche Atmosphäre im Herzen der Stadt.",
-    date: "2024-06-15T14:00:00",
-    endDate: "2024-06-15T23:00:00",
-    location: {
-      name: "Stadtpark Berlin",
-      address: {
-        street: "Großer Tiergarten",
-        city: "Berlin",
-        postalCode: "10785",
-        country: "Deutschland"
-      },
-      coordinates: {
-        lat: 52.5145,
-        lng: 13.3501
+  useEffect(() => {
+    // Lade Benutzer-Daten
+    const userData = localStorage.getItem('user')
+    if (userData) {
+      setCurrentUser(JSON.parse(userData))
+    }
+  }, [])
+
+  useEffect(() => {
+    const fetchEvent = async () => {
+      try {
+        // Token immer mitschicken, wenn vorhanden
+        const token = localStorage.getItem('token')
+        const headers = {
+          'Content-Type': 'application/json'
+        }
+        
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`
+        }
+
+        const response = await fetch(`http://localhost:5000/api/v1/events/${id}`, {
+          headers
+        })
+
+        // Spezifische Fehlerbehandlung basierend auf Backend-Responses
+        if (response.status === 404) {
+          setError('Event nicht gefunden')
+          return
+        }
+
+        if (response.status === 403) {
+          // Wenn kein Token vorhanden ist, versuchen wir es ohne Auth
+          if (!token) {
+            setError('Bitte melden Sie sich an, um dieses Event zu sehen')
+            return
+          }
+          // Wenn Token vorhanden, aber keine Berechtigung
+          setError('Sie haben keine Berechtigung für dieses Event')
+          return
+        }
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          setError(errorData.message || 'Event konnte nicht geladen werden')
+          return
+        }
+
+        const data = await response.json()
+        setEvent(data)
+        
+        // Teilnahme-Status nur setzen wenn ein Token vorhanden ist
+        if (token && currentUser?._id) {
+          setIsParticipating(data.participants?.some(p => p._id === currentUser._id))
+        }
+      } catch (err) {
+        console.error('Fehler beim Laden des Events:', err)
+        setError('Ein unerwarteter Fehler ist aufgetreten')
+      } finally {
+        setIsLoading(false)
       }
-    },
-    category: "Festival",
-    imageUrl: "/placeholder-event.jpg",
-    organizer: {
-      _id: 1,
-      firstName: "Max",
-      lastName: "Mustermann",
-      avatar: "/placeholder-avatar.jpg"
-    },
-    participants: [],
-    maxParticipants: 5000,
-    tags: ["Musik", "Festival", "Sommer", "Outdoor"],
-    status: "published",
-    isPublic: true
+    }
+
+    fetchEvent()
+  }, [id, currentUser])
+
+  useEffect(() => {
+    if (event?.location?.coordinates) {
+      let lat, lng
+      if (Array.isArray(event.location.coordinates.coordinates)) {
+        [lng, lat] = event.location.coordinates.coordinates
+      } else if (event.location.coordinates.lat && event.location.coordinates.lng) {
+        lat = event.location.coordinates.lat
+        lng = event.location.coordinates.lng
+      }
+
+      if (lat && lng) {
+        setMapUrl(`https://www.openstreetmap.org/export/embed.html?bbox=${lng-0.01},${lat-0.01},${lng+0.01},${lat+0.01}&layer=mapnik&marker=${lat},${lng}`)
+      }
+    }
+  }, [event])
+
+  const handleParticipate = async () => {
+    if (!currentUser) {
+      navigate('/login')
+      return
+    }
+
+    const token = localStorage.getItem('token')
+    if (!token) {
+      navigate('/login')
+      return
+    }
+
+    try {
+      const response = await fetch(`http://localhost:5000/api/v1/events/${id}/participate`, {
+        method: isParticipating ? 'DELETE' : 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (response.status === 401 || response.status === 403) {
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        setCurrentUser(null)
+        navigate('/login')
+        return
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || 'Teilnahme konnte nicht aktualisiert werden')
+      }
+
+      const updatedEvent = await response.json()
+      setEvent(updatedEvent)
+      setIsParticipating(!isParticipating)
+    } catch (err) {
+      console.error('Fehler bei der Teilnahme:', err)
+      setError(err.message)
+    }
   }
 
-  const displayEvent = event || sampleEvent
+  const handleSave = () => {
+    setIsSaved(!isSaved)
+    // TODO: API-Aufruf zum Speichern/Entfernen
+  }
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('de-DE', {
@@ -53,20 +153,38 @@ const EventDetail = ({ event }) => {
     })
   }
 
-  const handleParticipate = () => {
-    setIsParticipating(!isParticipating)
-    // TODO: API-Aufruf zum Teilnehmen/Abmelden
-  }
-
-  const handleSave = () => {
-    setIsSaved(!isSaved)
-    // TODO: API-Aufruf zum Speichern/Entfernen
-  }
-
   const getParticipantCount = () => {
-    const count = displayEvent.participants?.length || 0
-    const max = displayEvent.maxParticipants
+    const count = event?.participants?.length || 0
+    const max = event?.maxParticipants
     return max ? `${count}/${max}` : count
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-600">
+          {error}
+        </div>
+      </div>
+    )
+  }
+
+  if (!event) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-yellow-600">
+          Event nicht gefunden
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -74,30 +192,30 @@ const EventDetail = ({ event }) => {
       {/* Hero-Bereich mit Event-Bild */}
       <div className="relative h-96">
         <img
-          src={displayEvent.imageUrl}
-          alt={displayEvent.title}
+          src={event.imageUrl || '/placeholder-event.jpg'}
+          alt={event.title}
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 p-8 text-white">
           <div className="container mx-auto">
             <span className="inline-block bg-blue-600 text-white px-3 py-1 rounded-full text-sm mb-4">
-              {displayEvent.category}
+              {event.category}
             </span>
-            <h1 className="text-4xl font-bold mb-2">{displayEvent.title}</h1>
+            <h1 className="text-4xl font-bold mb-2">{event.title}</h1>
             <div className="flex items-center space-x-4 text-sm">
               <span className="flex items-center">
                 <svg className="h-5 w-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
-                {formatDate(displayEvent.date)} - {formatDate(displayEvent.endDate)}
+                {formatDate(event.date)} - {formatDate(event.endDate)}
               </span>
               <span className="flex items-center">
                 <svg className="h-5 w-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
-                {displayEvent.location.name}
+                {event.location.name}
               </span>
             </div>
           </div>
@@ -110,36 +228,50 @@ const EventDetail = ({ event }) => {
           <div className="lg:col-span-2">
             <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
               <h2 className="text-2xl font-semibold mb-4">Über diese Veranstaltung</h2>
-              <p className="text-gray-600 mb-6">{displayEvent.description}</p>
+              <p className="text-gray-600 mb-6">{event.description}</p>
               
-              <div className="mb-6">
-                <h3 className="text-xl font-semibold mb-4">Tags</h3>
-                <div className="flex flex-wrap gap-2">
-                  {displayEvent.tags.map((tag, index) => (
-                    <span key={index} className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm">
-                      #{tag}
-                    </span>
-                  ))}
+              {event.tags?.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-xl font-semibold mb-4">Tags</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {event.tags.map((tag, index) => (
+                      <span key={index} className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm">
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               <h3 className="text-xl font-semibold mb-4">Veranstaltungsort</h3>
-              <div className="aspect-w-16 aspect-h-9 mb-4">
-                <iframe
-                  src={`https://maps.google.com/maps?q=${displayEvent.location.coordinates.lat},${displayEvent.location.coordinates.lng}&z=15&output=embed`}
-                  width="100%"
-                  height="300"
-                  style={{ border: 0 }}
-                  allowFullScreen=""
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                  className="rounded-lg"
-                ></iframe>
-              </div>
+              {mapUrl ? (
+                <div className="aspect-w-16 aspect-h-9 mb-4">
+                  <iframe
+                    src={mapUrl}
+                    width="100%"
+                    height="300"
+                    style={{ border: 0 }}
+                    allowFullScreen=""
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    className="rounded-lg"
+                  ></iframe>
+                </div>
+              ) : (
+                <div className="bg-gray-100 rounded-lg p-4 mb-4 text-center text-gray-500">
+                  Keine Kartenansicht verfügbar
+                </div>
+              )}
               <p className="text-gray-600">
-                {displayEvent.location.address.street}<br />
-                {displayEvent.location.address.postalCode} {displayEvent.location.address.city}<br />
-                {displayEvent.location.address.country}
+                {event.location.address?.street && (
+                  <>{event.location.address.street}<br /></>
+                )}
+                {event.location.address?.postalCode && event.location.address?.city && (
+                  <>{event.location.address.postalCode} {event.location.address.city}<br /></>
+                )}
+                {event.location.address?.country && (
+                  <>{event.location.address.country}</>
+                )}
               </p>
             </div>
           </div>
@@ -152,52 +284,67 @@ const EventDetail = ({ event }) => {
                   <div className="text-lg font-semibold">
                     {getParticipantCount()} Teilnehmer
                   </div>
-                  {displayEvent.maxParticipants && (
+                  {event?.maxParticipants && (
                     <div className="text-sm text-gray-500">
-                      Maximal {displayEvent.maxParticipants} Teilnehmer
+                      Maximal {event.maxParticipants} Teilnehmer
                     </div>
                   )}
                 </div>
 
-                <button 
-                  onClick={handleParticipate}
-                  className={`w-full py-3 px-4 rounded-lg transition-colors duration-200 mb-4 ${
-                    isParticipating 
-                      ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' 
-                      : 'bg-blue-600 text-white hover:bg-blue-700'
-                  }`}
-                >
-                  {isParticipating ? 'Teilnahme stornieren' : 'Jetzt teilnehmen'}
-                </button>
+                {event?.status === 'published' && (
+                  <button 
+                    onClick={handleParticipate}
+                    className={`w-full py-3 px-4 rounded-lg transition-colors duration-200 mb-4 ${
+                      !currentUser 
+                        ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
+                        : isParticipating 
+                          ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' 
+                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                    }`}
+                    disabled={!currentUser}
+                    title={!currentUser ? 'Bitte melden Sie sich an, um teilzunehmen' : ''}
+                  >
+                    {!currentUser 
+                      ? 'Anmelden zum Teilnehmen' 
+                      : isParticipating 
+                        ? 'Teilnahme stornieren' 
+                        : 'Jetzt teilnehmen'
+                    }
+                  </button>
+                )}
 
-                <button 
-                  onClick={handleSave}
-                  className={`w-full border py-3 px-4 rounded-lg transition-colors duration-200 mb-6 ${
-                    isSaved 
-                      ? 'border-blue-600 text-blue-600 bg-blue-50 hover:bg-blue-100' 
-                      : 'border-blue-600 text-blue-600 hover:bg-blue-50'
-                  }`}
-                >
-                  {isSaved ? 'Aus Merkliste entfernen' : 'Auf Merkliste setzen'}
-                </button>
+                {currentUser && (
+                  <button 
+                    onClick={handleSave}
+                    className={`w-full border py-3 px-4 rounded-lg transition-colors duration-200 mb-6 ${
+                      isSaved 
+                        ? 'border-blue-600 text-blue-600 bg-blue-50 hover:bg-blue-100' 
+                        : 'border-blue-600 text-blue-600 hover:bg-blue-50'
+                    }`}
+                  >
+                    {isSaved ? 'Aus Merkliste entfernen' : 'Auf Merkliste setzen'}
+                  </button>
+                )}
               </div>
 
-              <div className="border-t pt-6">
-                <h3 className="font-semibold mb-4">Veranstalter</h3>
-                <Link to={`/user/${displayEvent.organizer._id}`} className="flex items-center hover:opacity-80 transition-opacity">
-                  <img
-                    src={displayEvent.organizer.avatar}
-                    alt={`${displayEvent.organizer.firstName} ${displayEvent.organizer.lastName}`}
-                    className="w-12 h-12 rounded-full mr-4"
-                  />
-                  <div>
-                    <div className="font-medium">
-                      {displayEvent.organizer.firstName} {displayEvent.organizer.lastName}
+              {event.organizer && (
+                <div className="border-t pt-6">
+                  <h3 className="font-semibold mb-4">Veranstalter</h3>
+                  <Link to={`/user/${event.organizer._id}`} className="flex items-center hover:opacity-80 transition-opacity">
+                    <img
+                      src={event.organizer.avatar || '/placeholder-avatar.jpg'}
+                      alt={`${event.organizer.firstName} ${event.organizer.lastName}`}
+                      className="w-12 h-12 rounded-full mr-4"
+                    />
+                    <div>
+                      <div className="font-medium">
+                        {event.organizer.firstName} {event.organizer.lastName}
+                      </div>
+                      <div className="text-sm text-gray-500">Veranstalter</div>
                     </div>
-                    <div className="text-sm text-gray-500">Veranstalter</div>
-                  </div>
-                </Link>
-              </div>
+                  </Link>
+                </div>
+              )}
 
               <div className="border-t pt-6 mt-6">
                 <h3 className="font-semibold mb-4">Teilen</h3>

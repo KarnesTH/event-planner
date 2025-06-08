@@ -15,13 +15,11 @@ router.get('/', async (req, res) => {
             date, 
             lat, 
             lng, 
-            radius = 50 // Standardradius in km
+            radius = 50
         } = req.query;
 
-        // Basis-Query für veröffentlichte Events
         let query = { status: 'published' };
 
-        // Textsuche
         if (search) {
             query.$or = [
                 { title: { $regex: search, $options: 'i' } },
@@ -29,12 +27,10 @@ router.get('/', async (req, res) => {
             ];
         }
 
-        // Kategorie-Filter
         if (category) {
             query.category = category;
         }
 
-        // Datum-Filter
         if (date) {
             const now = new Date();
             const tomorrow = new Date(now);
@@ -72,7 +68,6 @@ router.get('/', async (req, res) => {
             }
         }
 
-        // Geolocation-Filter
         if (lat && lng) {
             console.log('Geolocation-Abfrage:', { lat, lng, radius });
             try {
@@ -116,15 +111,13 @@ router.get('/my-events', auth, async (req, res) => {
     try {
         const userId = req.user._id;
         
-        // Events, die der Benutzer organisiert
         const organizedEvents = await Event.find({ organizer: userId })
             .sort({ date: 1 })
             .populate('location', 'name address city');
 
-        // Events, an denen der Benutzer teilnimmt
         const participatingEvents = await Event.find({ 
             participants: userId,
-            organizer: { $ne: userId } // Nicht die Events, die er selbst organisiert
+            organizer: { $ne: userId }
         })
             .sort({ date: 1 })
             .populate('organizer', 'firstName lastName')
@@ -147,7 +140,6 @@ router.get('/my-events', auth, async (req, res) => {
  */
 router.post('/', auth, async (req, res) => {
     try {
-        // Konvertiere lat/lng zu GeoJSON Point
         if (req.body.location?.coordinates) {
             const { lat, lng } = req.body.location.coordinates;
             req.body.location.coordinates = {
@@ -159,13 +151,12 @@ router.post('/', auth, async (req, res) => {
         const eventData = {
             ...req.body,
             organizer: req.user._id,
-            status: 'draft' // Standardmäßig als Entwurf
+            status: 'draft'
         };
         
         const event = new Event(eventData);
         const savedEvent = await event.save();
         
-        // Populiere die Referenzen für die Antwort
         await savedEvent.populate('organizer', 'firstName lastName');
         await savedEvent.populate('location', 'name address city');
         
@@ -192,8 +183,12 @@ router.get('/:id', async (req, res) => {
             return res.status(404).json({ message: 'Event nicht gefunden' });
         }
 
-        // Wenn das Event nicht veröffentlicht ist, prüfe ob der Benutzer der Organisator ist
-        if (event.status !== 'published' && (!req.user || req.user._id.toString() !== event.organizer._id.toString())) {
+        const isAccessible = 
+            event.status === 'published' || 
+            event.isPublic || 
+            (req.user && req.user._id.toString() === event.organizer._id.toString());
+
+        if (!isAccessible) {
             return res.status(403).json({ message: 'Keine Berechtigung für dieses Event' });
         }
 
@@ -217,13 +212,34 @@ router.put('/:id', auth, async (req, res) => {
             return res.status(404).json({ message: 'Event nicht gefunden' });
         }
 
-        // Prüfe ob der Benutzer der Organisator ist
         if (event.organizer.toString() !== req.user._id.toString()) {
             return res.status(403).json({ message: 'Keine Berechtigung zum Bearbeiten dieses Events' });
         }
 
-        // Aktualisiere nur erlaubte Felder
-        const allowedUpdates = ['title', 'description', 'date', 'location', 'maxParticipants', 'status', 'category', 'imageUrl'];
+        const allowedUpdates = [
+            'title',
+            'description',
+            'date',
+            'endDate',
+            'location',
+            'maxParticipants',
+            'status',
+            'category',
+            'imageUrl',
+            'tags',
+            'isPublic'
+        ];
+
+        // Validiere die Updates
+        const invalidFields = Object.keys(req.body).filter(key => !allowedUpdates.includes(key));
+        if (invalidFields.length > 0) {
+            return res.status(400).json({
+                message: 'Ungültige Felder in der Anfrage',
+                invalidFields,
+                allowedFields: allowedUpdates
+            });
+        }
+
         const updates = Object.keys(req.body)
             .filter(key => allowedUpdates.includes(key))
             .reduce((obj, key) => {
@@ -231,17 +247,29 @@ router.put('/:id', auth, async (req, res) => {
                 return obj;
             }, {});
 
+        // Spezielle Behandlung für location.coordinates
+        if (updates.location?.coordinates) {
+            const { lat, lng } = updates.location.coordinates;
+            updates.location.coordinates = {
+                type: 'Point',
+                coordinates: [parseFloat(lng), parseFloat(lat)]
+            };
+        }
+
         Object.assign(event, updates);
         const updatedEvent = await event.save();
         
         await updatedEvent.populate('organizer', 'firstName lastName');
         await updatedEvent.populate('location', 'name address city');
+        await updatedEvent.populate('participants', 'firstName lastName');
         
         res.json(updatedEvent);
     } catch (err) {
+        console.error('Fehler beim Event-Update:', err);
         res.status(400).json({ 
             message: 'Fehler beim Aktualisieren des Events',
-            error: err.message 
+            error: err.message,
+            details: err.errors || null
         });
     }
 });
@@ -257,7 +285,6 @@ router.delete('/:id', auth, async (req, res) => {
             return res.status(404).json({ message: 'Event nicht gefunden' });
         }
 
-        // Prüfe ob der Benutzer der Organisator ist
         if (event.organizer.toString() !== req.user._id.toString()) {
             return res.status(403).json({ message: 'Keine Berechtigung zum Löschen dieses Events' });
         }

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
-import { Link } from 'react-router-dom'
 import EventCard from '../../components/eventcard/EventCard'
+import EventModal from '../../components/eventmodal/EventModal'
 
 /**
  * @description: This is the Dashboard component.
@@ -12,6 +12,8 @@ const Dashboard = () => {
   const [userData, setUserData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [_isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -39,6 +41,43 @@ const Dashboard = () => {
     }
     fetchUserData()
   }, [])
+
+  const handleCreateEvent = async (eventData) => {
+    setIsSubmitting(true)
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) throw new Error('Nicht angemeldet')
+
+      const response = await fetch('http://localhost:5000/api/v1/events', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(eventData)
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Fehler beim Erstellen des Events')
+      }
+
+      const updatedUserData = await fetch('http://localhost:5000/api/v1/auth/me', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }).then(res => res.json())
+
+      setUserData(updatedUserData)
+      setIsModalOpen(false)
+    } catch (err) {
+      console.error('Fehler beim Erstellen des Events:', err)
+      throw err
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   const renderOverview = () => {
     if (!userData?.events) return null
@@ -108,12 +147,12 @@ const Dashboard = () => {
         {renderOverview()}
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold">Meine Veranstaltungen</h2>
-          <Link 
-            to="/events/new" 
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
             Neue Veranstaltung
-          </Link>
+          </button>
         </div>
         {renderEventSection(
           upcomingEvents,
@@ -124,6 +163,14 @@ const Dashboard = () => {
           pastEvents,
           'Vergangene Veranstaltungen',
           'Keine vergangenen Veranstaltungen'
+        )}
+
+        {isModalOpen && (
+          <EventModal
+            onClose={() => setIsModalOpen(false)}
+            onSubmit={handleCreateEvent}
+            isEdit={false}
+          />
         )}
       </div>
     )
