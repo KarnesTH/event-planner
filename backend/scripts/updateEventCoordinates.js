@@ -9,7 +9,6 @@ const updateEventCoordinates = async () => {
         await mongoose.connect(process.env.MONGODB_URI);
         console.log('MongoDB verbunden');
 
-        // Finde alle Events mit alten Koordinaten
         const events = await Event.find({
             'location.coordinates.lat': { $exists: true },
             'location.coordinates.lng': { $exists: true }
@@ -17,7 +16,6 @@ const updateEventCoordinates = async () => {
 
         console.log(`${events.length} Events gefunden, die aktualisiert werden müssen`);
 
-        // Aktualisiere jedes Event
         for (const event of events) {
             const { lat, lng } = event.location.coordinates;
             event.location.coordinates = {

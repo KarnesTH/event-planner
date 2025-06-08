@@ -1,5 +1,9 @@
 import { Link } from 'react-router-dom'
 
+/**
+ * @description: This is the AboutPage component.
+ * @returns {JSX.Element}
+ */
 const AboutPage = () => {
   const features = [
     {

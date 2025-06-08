@@ -40,7 +40,7 @@ const eventSchema = new mongoose.Schema({
                 default: 'Point'
             },
             coordinates: {
-                type: [Number], // [longitude, latitude]
+                type: [Number],
                 required: true
             }
         }
@@ -65,7 +65,7 @@ const eventSchema = new mongoose.Schema({
     }],
     maxParticipants: {
         type: Number,
-        default: null // null bedeutet unbegrenzt
+        default: null
     },
     tags: [{
         type: String,

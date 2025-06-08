@@ -3,6 +3,10 @@ import { useAuth } from '../../context/AuthContext'
 import { Link } from 'react-router-dom'
 import EventCard from '../../components/eventcard/EventCard'
 
+/**
+ * @description: This is the Dashboard component.
+ * @returns {JSX.Element}
+ */
 const Dashboard = () => {
   const { user } = useAuth()
   const [userData, setUserData] = useState(null)

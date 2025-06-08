@@ -2,6 +2,12 @@ import { useState, useEffect, useCallback } from 'react'
 import EventCard from '../../components/eventcard/EventCard'
 import SearchBar from '../../components/searchbar/SearchBar'
 
+/**
+ * @description: This is the EventsPage component.
+ * @param {Object} fetchEvents - The function to fetch events.
+ * @param {Object} fetchNearbyEvents - The function to fetch nearby events.
+ * @returns {JSX.Element}
+ */
 const EventsPage = ({ fetchEvents, fetchNearbyEvents }) => {
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)

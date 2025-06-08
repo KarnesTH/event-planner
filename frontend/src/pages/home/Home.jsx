@@ -2,6 +2,10 @@ import { useState } from 'react'
 import Hero from '../../components/hero/Hero'
 import EventList from '../../components/eventlist/EventList'
 
+/**
+ * @description: This is the Home component.
+ * @returns {JSX.Element}
+ */
 const Home = () => {
   const [showNearbyEvents, setShowNearbyEvents] = useState(false)
 
