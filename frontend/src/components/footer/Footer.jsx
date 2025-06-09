@@ -1,5 +1,9 @@
 import { Link } from 'react-router-dom'
 
+/**
+ * Footer component
+ * @returns {JSX.Element} - The footer component
+ */
 const Footer = () => {
   const currentYear = new Date().getFullYear()
 

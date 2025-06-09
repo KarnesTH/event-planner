@@ -2,6 +2,10 @@ import { useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 
+/**
+ * Login component
+ * @returns {JSX.Element} - The login component
+ */
 const Login = () => {
   const { login } = useAuth()
   const navigate = useNavigate()
@@ -18,6 +22,10 @@ const Login = () => {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
 
+  /**
+   * Validate the form
+   * @returns {boolean} - Whether the form is valid
+   */
   const validateForm = () => {
     const newErrors = {}
     if (!formData.email.trim()) {
@@ -32,6 +40,10 @@ const Login = () => {
     return Object.keys(newErrors).length === 0
   }
 
+  /**
+   * Handle the submit
+   * @param {Event} e - The event
+   */
   const handleSubmit = async (e) => {
     e.preventDefault()
     setSubmitError('')
@@ -56,6 +68,10 @@ const Login = () => {
     }
   }
 
+  /**
+   * Handle the change
+   * @param {Event} e - The event
+   */
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
     setFormData(prev => ({
@@ -68,6 +84,10 @@ const Login = () => {
     }
   }
 
+  /**
+   * Render the login
+   * @returns {JSX.Element} - The login
+   */
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">

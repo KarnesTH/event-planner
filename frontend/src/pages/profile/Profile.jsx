@@ -2,12 +2,19 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { Link } from 'react-router-dom'
 
+/**
+ * Profile component
+ * @returns {JSX.Element} - The profile component
+ */
 const Profile = () => {
   const { user: authUser } = useAuth()
   const [userData, setUserData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
+  /**
+   * Fetch the user data
+   */
   useEffect(() => {
     const fetchUserData = async () => {
       try {
@@ -41,6 +48,10 @@ const Profile = () => {
     fetchUserData()
   }, [])
 
+  /**
+   * Render the loading state
+   * @returns {JSX.Element} - The loading state
+   */
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -49,6 +60,10 @@ const Profile = () => {
     )
   }
 
+  /**
+   * Render the error state
+   * @returns {JSX.Element} - The error state
+   */
   if (error) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -60,6 +75,10 @@ const Profile = () => {
     )
   }
 
+  /**
+   * Render the user not found state
+   * @returns {JSX.Element} - The user not found state
+   */
   if (!userData?.user) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -78,6 +97,10 @@ const Profile = () => {
 
   const profileUser = userData.user
 
+  /**
+   * Render the profile
+   * @returns {JSX.Element} - The profile
+   */
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-4">

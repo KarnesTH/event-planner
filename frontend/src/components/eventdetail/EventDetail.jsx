@@ -1,9 +1,15 @@
 import { useState, useEffect } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
+import useEventDetail from '../../hooks/useEventDetail'
 
+/**
+ * EventDetail component
+ * @returns {JSX.Element} - The EventDetail component
+ */
 const EventDetail = () => {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { loadEvent, participate, loading: apiLoading, error: apiError } = useEventDetail()
   const [event, setEvent] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -12,136 +18,100 @@ const EventDetail = () => {
   const [mapUrl, setMapUrl] = useState('')
   const [currentUser, setCurrentUser] = useState(null)
 
+  /**
+   * Initialize the data
+   */
   useEffect(() => {
-    // Lade Benutzer-Daten
-    const userData = localStorage.getItem('user')
-    if (userData) {
-      setCurrentUser(JSON.parse(userData))
-    }
-  }, [])
-
-  useEffect(() => {
-    const fetchEvent = async () => {
+    const initializeData = async () => {
       try {
-        // Token immer mitschicken, wenn vorhanden
-        const token = localStorage.getItem('token')
-        const headers = {
-          'Content-Type': 'application/json'
+        const userData = localStorage.getItem('user')
+        if (userData) {
+          try {
+            const parsedUser = JSON.parse(userData)
+            setCurrentUser(parsedUser)
+          } catch (err) {
+            console.error('Fehler beim Parsen der User-Daten:', err)
+          }
         }
+
+        if (!id) return
+        setIsLoading(true)
+        const eventData = await loadEvent(id)
         
-        if (token) {
-          headers['Authorization'] = `Bearer ${token}`
-        }
-
-        const response = await fetch(`http://localhost:5000/api/v1/events/${id}`, {
-          headers
-        })
-
-        // Spezifische Fehlerbehandlung basierend auf Backend-Responses
-        if (response.status === 404) {
+        if (!eventData) {
           setError('Event nicht gefunden')
           return
         }
-
-        if (response.status === 403) {
-          // Wenn kein Token vorhanden ist, versuchen wir es ohne Auth
-          if (!token) {
-            setError('Bitte melden Sie sich an, um dieses Event zu sehen')
-            return
-          }
-          // Wenn Token vorhanden, aber keine Berechtigung
-          setError('Sie haben keine Berechtigung für dieses Event')
-          return
-        }
-
-        if (!response.ok) {
-          const errorData = await response.json()
-          setError(errorData.message || 'Event konnte nicht geladen werden')
-          return
-        }
-
-        const data = await response.json()
-        setEvent(data)
         
-        // Teilnahme-Status nur setzen wenn ein Token vorhanden ist
-        if (token && currentUser?._id) {
-          setIsParticipating(data.participants?.some(p => p._id === currentUser._id))
+        setEvent(eventData)
+        
+        if (userData) {
+          const parsedUser = JSON.parse(userData)
+          const isUserParticipating = eventData.participants?.some(p => p._id === parsedUser._id)
+          setIsParticipating(isUserParticipating)
+        }
+
+        if (eventData?.location?.coordinates) {
+          let lat, lng
+          if (Array.isArray(eventData.location.coordinates.coordinates)) {
+            [lng, lat] = eventData.location.coordinates.coordinates
+          } else if (eventData.location.coordinates.lat && eventData.location.coordinates.lng) {
+            lat = eventData.location.coordinates.lat
+            lng = eventData.location.coordinates.lng
+          }
+
+          if (lat && lng) {
+            const newMapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${lng-0.01},${lat-0.01},${lng+0.01},${lat+0.01}&layer=mapnik&marker=${lat},${lng}`
+            setMapUrl(newMapUrl)
+          }
         }
       } catch (err) {
-        console.error('Fehler beim Laden des Events:', err)
-        setError('Ein unerwarteter Fehler ist aufgetreten')
+        console.error('Fehler beim Laden der Daten:', err)
+        setError(apiError || 'Ein unerwarteter Fehler ist aufgetreten')
       } finally {
         setIsLoading(false)
       }
     }
 
-    fetchEvent()
-  }, [id, currentUser])
+    initializeData()
+  }, [id, loadEvent, apiError])
 
-  useEffect(() => {
-    if (event?.location?.coordinates) {
-      let lat, lng
-      if (Array.isArray(event.location.coordinates.coordinates)) {
-        [lng, lat] = event.location.coordinates.coordinates
-      } else if (event.location.coordinates.lat && event.location.coordinates.lng) {
-        lat = event.location.coordinates.lat
-        lng = event.location.coordinates.lng
-      }
-
-      if (lat && lng) {
-        setMapUrl(`https://www.openstreetmap.org/export/embed.html?bbox=${lng-0.01},${lat-0.01},${lng+0.01},${lat+0.01}&layer=mapnik&marker=${lat},${lng}`)
-      }
-    }
-  }, [event])
-
+  /**
+   * Handle the participation
+   */
   const handleParticipate = async () => {
-    if (!currentUser) {
-      navigate('/login')
-      return
-    }
-
-    const token = localStorage.getItem('token')
-    if (!token) {
+    if (!currentUser || !event?._id) {
       navigate('/login')
       return
     }
 
     try {
-      const response = await fetch(`http://localhost:5000/api/v1/events/${id}/participate`, {
-        method: isParticipating ? 'DELETE' : 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      })
-
-      if (response.status === 401 || response.status === 403) {
-        localStorage.removeItem('token')
-        localStorage.removeItem('user')
-        setCurrentUser(null)
-        navigate('/login')
-        return
-      }
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || 'Teilnahme konnte nicht aktualisiert werden')
-      }
-
-      const updatedEvent = await response.json()
-      setEvent(updatedEvent)
+      await participate(event._id, isParticipating)
       setIsParticipating(!isParticipating)
+      
+      const updatedEvent = await loadEvent(event._id)
+      if (updatedEvent) {
+        setEvent(updatedEvent)
+      }
     } catch (err) {
       console.error('Fehler bei der Teilnahme:', err)
-      setError(err.message)
+      setError(apiError || 'Teilnahme konnte nicht aktualisiert werden')
     }
   }
 
+  /**
+   * Handle the saving
+   */
   const handleSave = () => {
     setIsSaved(!isSaved)
     // TODO: API-Aufruf zum Speichern/Entfernen
   }
 
+  /**
+   * Format the date
+   * @param {string} dateString - The date string
+   * @returns {string} - The formatted date
+   */
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('de-DE', {
       weekday: 'long',
@@ -153,12 +123,20 @@ const EventDetail = () => {
     })
   }
 
+  /**
+   * Get the participant count
+   * @returns {number} - The participant count
+   */
   const getParticipantCount = () => {
     const count = event?.participants?.length || 0
     const max = event?.maxParticipants
     return max ? `${count}/${max}` : count
   }
 
+  /**
+   * Render the loading state
+   * @returns {JSX.Element} - The loading state
+   */
   if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -167,6 +145,10 @@ const EventDetail = () => {
     )
   }
 
+  /**
+   * Render the error state
+   * @returns {JSX.Element} - The error state
+   */
   if (error) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -177,6 +159,10 @@ const EventDetail = () => {
     )
   }
 
+  /**
+   * Render the event not found state
+   * @returns {JSX.Element} - The event not found state
+   */
   if (!event) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -187,15 +173,23 @@ const EventDetail = () => {
     )
   }
 
+  /**
+   * Render the event detail
+   * @returns {JSX.Element} - The event detail
+   */
   return (
     <div className="bg-white">
       {/* Hero-Bereich mit Event-Bild */}
       <div className="relative h-96">
-        <img
-          src={event.imageUrl || '/placeholder-event.jpg'}
-          alt={event.title}
-          className="w-full h-full object-cover"
-        />
+        {event.imageUrl ? (
+            <img 
+              src={event.imageUrl.startsWith('http') ? event.imageUrl : `http://localhost:5000${event.imageUrl}`}
+              alt={event.title}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <img src="/placeholder-event.jpg" alt={event.title} className="w-full h-full object-cover" />
+          )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 p-8 text-white">
           <div className="container mx-auto">
@@ -374,4 +368,4 @@ const EventDetail = () => {
   )
 }
 
-export default EventDetail 
+export default EventDetail

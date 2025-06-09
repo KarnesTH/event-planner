@@ -1,6 +1,13 @@
 import SearchBar from "../searchbar/SearchBar"
 
-const Hero = () => {
+/**
+ * Hero component
+ * @param {Object} filters - The filters
+ * @param {Function} onFilterChange - The function to change the filters
+ * @param {Object} events - The events
+ * @param {boolean} isHomePage - Whether the component is on the home page
+ */
+const Hero = ({ filters, onFilterChange, events, isHomePage = true }) => {
   return (
     <section className="relative bg-gradient-to-b from-blue-50 to-white py-24">
       <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
@@ -12,7 +19,12 @@ const Hero = () => {
           <p className="text-xl text-gray-600 mb-8">
             Finde und organisiere die besten Events in deiner Nähe. Von Konzerten über Workshops bis hin zu Networking-Events – alles an einem Ort.
           </p>
-          <SearchBar />
+          <SearchBar 
+            filters={filters} 
+            onFilterChange={onFilterChange} 
+            events={events}
+            isHomePage={isHomePage}
+          />
           <div className="mt-8 flex justify-center space-x-4 text-sm text-gray-500">
             <span>Beliebte Kategorien:</span>
             <a href="#" className="hover:text-blue-600">Konzerte</a>

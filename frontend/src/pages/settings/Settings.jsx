@@ -2,6 +2,10 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { Link } from 'react-router-dom'
 
+/**
+ * Settings component
+ * @returns {JSX.Element} - The settings component
+ */
 const Settings = () => {
   const { user: authUser } = useAuth()
   const [activeTab, setActiveTab] = useState('profile')
@@ -10,12 +14,12 @@ const Settings = () => {
   const [successMessage, setSuccessMessage] = useState('')
   const [userData, setUserData] = useState(null)
 
-  // Formular-Zustände
   const [profileForm, setProfileForm] = useState({
     firstName: '',
     lastName: '',
     email: ''
   })
+
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
     newPassword: '',
@@ -24,6 +28,9 @@ const Settings = () => {
   const [formErrors, setFormErrors] = useState({})
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  /**
+   * Fetch the user data
+   */
   useEffect(() => {
     const fetchUserData = async () => {
       try {
@@ -62,6 +69,10 @@ const Settings = () => {
     fetchUserData()
   }, [])
 
+  /**
+   * Validate the profile form
+   * @returns {boolean} - Whether the profile form is valid
+   */
   const validateProfileForm = () => {
     const errors = {}
     if (!profileForm.firstName.trim()) {
@@ -79,6 +90,10 @@ const Settings = () => {
     return Object.keys(errors).length === 0
   }
 
+  /**
+   * Validate the password form
+   * @returns {boolean} - Whether the password form is valid
+   */
   const validatePasswordForm = () => {
     const errors = {}
     if (!passwordForm.currentPassword) {
@@ -96,6 +111,10 @@ const Settings = () => {
     return Object.keys(errors).length === 0
   }
 
+  /**
+   * Handle the profile submit
+   * @param {Event} e - The event
+   */
   const handleProfileSubmit = async (e) => {
     e.preventDefault()
     setSuccessMessage('')
@@ -130,6 +149,10 @@ const Settings = () => {
     }
   }
 
+  /**
+   * Handle the password submit
+   * @param {Event} e - The event
+   */
   const handlePasswordSubmit = async (e) => {
     e.preventDefault()
     setSuccessMessage('')
@@ -172,6 +195,11 @@ const Settings = () => {
     }
   }
 
+  /**
+   * Handle the input change
+   * @param {Event} e - The event
+   * @param {string} formType - The form type
+   */
   const handleInputChange = (e, formType) => {
     const { name, value } = e.target
     if (formType === 'profile') {
@@ -185,6 +213,10 @@ const Settings = () => {
     }
   }
 
+  /**
+   * Render the loading state
+   * @returns {JSX.Element} - The loading state
+   */
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -193,6 +225,10 @@ const Settings = () => {
     )
   }
 
+  /**
+   * Render the error state
+   * @returns {JSX.Element} - The error state
+   */
   if (error && !userData) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -210,6 +246,10 @@ const Settings = () => {
     )
   }
 
+  /**
+   * Render the settings
+   * @returns {JSX.Element} - The settings
+   */
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-4">

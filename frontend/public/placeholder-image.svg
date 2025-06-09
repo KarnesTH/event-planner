@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="400" height="300" viewBox="0 0 400 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!-- Hintergrund -->
+    <rect width="400" height="300" fill="#F3F4F6"/>
+    
+    <!-- Bildsymbol -->
+    <rect x="100" y="75" width="200" height="150" rx="4" fill="#E5E7EB" stroke="#9CA3AF" stroke-width="2"/>
+    
+    <!-- Berg-Symbol -->
+    <path d="M150 175 L200 125 L250 175" stroke="#9CA3AF" stroke-width="2" fill="none"/>
+    
+    <!-- Sonne -->
+    <circle cx="280" cy="100" r="20" fill="#FCD34D" opacity="0.8"/>
+    
+    <!-- Bildrahmen-Details -->
+    <path d="M100 75 L300 75" stroke="#9CA3AF" stroke-width="2"/>
+    <path d="M100 225 L300 225" stroke="#9CA3AF" stroke-width="2"/>
+    
+    <!-- Text "Bild" -->
+    <text x="200" y="210" font-family="Arial, sans-serif" font-size="14" fill="#6B7280" text-anchor="middle">
+        Bild
+    </text>
+</svg> 

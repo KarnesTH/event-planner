@@ -1,223 +1,232 @@
-import { useState, useEffect } from 'react'
-import { useAuth } from '../../context/AuthContext'
-import EventCard from '../../components/eventcard/EventCard'
+import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
+import useEvents from '../../hooks/useEvents'
 import EventModal from '../../components/eventmodal/EventModal'
+import EventCard from '../../components/eventcard/EventCard'
 
 /**
  * @description: This is the Dashboard component.
- * @returns {JSX.Element}
+ * @returns {JSX.Element} - The dashboard component
  */
 const Dashboard = () => {
-  const { user } = useAuth()
-  const [userData, setUserData] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [_isSubmitting, setIsSubmitting] = useState(false)
+  const navigate = useNavigate()
+  const { events, loading, error, loadUserEvents } = useEvents()
+  const [showModal, setShowModal] = useState(false)
+  const [selectedEvent, setSelectedEvent] = useState(null)
+  const [activeTab, setActiveTab] = useState('created')
+  const [stats, setStats] = useState({
+    totalEvents: 0,
+    upcomingEvents: 0,
+    totalParticipants: 0
+  })
 
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const token = localStorage.getItem('token')
-        if (!token) { throw new Error('Nicht angemeldet') }
-        const response = await fetch('http://localhost:5000/api/v1/auth/me', { 
-          headers: { 
-            'Authorization': `Bearer ${token}`, 
-            'Content-Type': 'application/json' 
-          } 
-        })
-        if (!response.ok) { 
-          const errorData = await response.json().catch(() => ({}))
-          throw new Error(errorData.error || 'Fehler beim Laden der Benutzerdaten') 
-        }
-        const data = await response.json()
-        setUserData(data)
-      } catch (err) { 
-        console.error('Fehler beim Laden der Daten:', err)
-        setError(err.message) 
-      } finally { 
-        setLoading(false) 
-      }
-    }
-    fetchUserData()
+  /**
+   * Update the statistics
+   * @param {Object} userEvents - The user events
+   */
+  const updateStats = useCallback((userEvents) => {
+    const now = new Date()
+    const upcomingEvents = userEvents.filter(event => new Date(event.date) > now)
+    const totalParticipants = userEvents.reduce((sum, event) => 
+      sum + (event.participants?.length || 0), 0)
+
+    setStats({
+      totalEvents: userEvents.length,
+      upcomingEvents: upcomingEvents.length,
+      totalParticipants
+    })
   }, [])
 
-  const handleCreateEvent = async (eventData) => {
-    setIsSubmitting(true)
-    try {
-      const token = localStorage.getItem('token')
-      if (!token) throw new Error('Nicht angemeldet')
-
-      const response = await fetch('http://localhost:5000/api/v1/events', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(eventData)
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || 'Fehler beim Erstellen des Events')
-      }
-
-      const updatedUserData = await fetch('http://localhost:5000/api/v1/auth/me', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      }).then(res => res.json())
-
-      setUserData(updatedUserData)
-      setIsModalOpen(false)
-    } catch (err) {
-      console.error('Fehler beim Erstellen des Events:', err)
-      throw err
-    } finally {
-      setIsSubmitting(false)
+  /**
+   * Load the user events
+   */
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    if (!token) {
+      navigate('/login')
+      return
     }
+
+    loadUserEvents()
+  }, [loadUserEvents, navigate])
+
+  /**
+   * Handle the creation of a new event
+   */
+  const handleCreateEvent = () => {
+    setSelectedEvent(null)
+    setShowModal(true)
   }
 
-  const handleUpdateEvent = async (updatedEvent) => {
+  /**
+   * Handle the editing of an event
+   * @param {Object} event - The event
+   */
+  const handleEditEvent = (event) => {
+    setSelectedEvent(event)
+    setShowModal(true)
+  }
+
+  /**
+   * Handle the closing of the modal
+   */
+  const handleCloseModal = async () => {
+    setShowModal(false)
+    setSelectedEvent(null)
     try {
-      const token = localStorage.getItem('token')
-      if (!token) throw new Error('Nicht angemeldet')
-
-      const updatedUserData = await fetch('http://localhost:5000/api/v1/auth/me', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      }).then(res => res.json())
-
-      setUserData(updatedUserData)
+      const userEvents = await loadUserEvents()
+      if (userEvents) {
+        updateStats(userEvents)
+      }
     } catch (err) {
       console.error('Fehler beim Aktualisieren der Events:', err)
     }
   }
 
-  const renderOverview = () => {
-    if (!userData?.events) return null
-    const { organized, participating } = userData.events
-    const totalEvents = organized.length + participating.length
-    const now = new Date()
-    const upcomingEvents = [...organized, ...participating].filter(event => new Date(event.date) > now).length
-    const pastEvents = totalEvents - upcomingEvents
-
-    return (
-      <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-        <h3 className="text-lg font-semibold mb-4">Übersicht</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <h4 className="font-medium text-blue-800">Gesamt Events</h4>
-            <p className="text-2xl font-bold text-blue-600">{totalEvents}</p>
-          </div>
-          <div className="bg-green-50 p-4 rounded-lg">
-            <h4 className="font-medium text-green-800">Kommende Events</h4>
-            <p className="text-2xl font-bold text-green-600">{upcomingEvents}</p>
-          </div>
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h4 className="font-medium text-gray-800">Vergangene Events</h4>
-            <p className="text-2xl font-bold text-gray-600">{pastEvents}</p>
-          </div>
-        </div>
-      </div>
-    )
+  /**
+   * Get the active events
+   * @returns {Object} - The active events
+   */
+  const getActiveEvents = () => {
+    if (!events) return []
+    return activeTab === 'created' 
+      ? events.filter(event => event.organizer?._id === JSON.parse(localStorage.getItem('user'))?._id)
+      : events.filter(event => event.participants?.some(p => p._id === JSON.parse(localStorage.getItem('user'))?._id))
   }
 
-  const renderEventSection = (events, title, emptyMessage) => (
-    <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-      <h3 className="text-lg font-semibold mb-4">{title}</h3>
-      {events.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {events.map(event => (
-            <EventCard 
-              key={event._id} 
-              event={event}
-              onUpdate={handleUpdateEvent}
-              onDelete={handleUpdateEvent}
-            />
-          ))}
-        </div>
-      ) : (
-        <p className="text-gray-500 text-center py-4">{emptyMessage}</p>
-      )}
-    </div>
-  )
-
-  const renderEvents = () => {
-    if (!userData?.events) return null
-
-    const { organized, participating } = userData.events
-    const now = new Date()
-    const allEvents = [...organized, ...participating]
-    
-    const upcomingEvents = allEvents
-      .filter(event => new Date(event.date) > now)
-      .sort((a, b) => new Date(a.date) - new Date(b.date))
-    
-    const pastEvents = allEvents
-      .filter(event => new Date(event.date) <= now)
-      .sort((a, b) => new Date(b.date) - new Date(a.date))
-
-    return (
-      <div className="space-y-6">
-        {renderOverview()}
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">Meine Veranstaltungen</h2>
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            Neue Veranstaltung
-          </button>
-        </div>
-        {renderEventSection(
-          upcomingEvents,
-          'Kommende Veranstaltungen',
-          'Keine kommenden Veranstaltungen'
-        )}
-        {renderEventSection(
-          pastEvents,
-          'Vergangene Veranstaltungen',
-          'Keine vergangenen Veranstaltungen'
-        )}
-
-        {isModalOpen && (
-          <EventModal
-            onClose={() => setIsModalOpen(false)}
-            onSubmit={handleCreateEvent}
-            isEdit={false}
-          />
-        )}
-      </div>
-    )
-  }
-
+  /**
+   * Render the loading state
+   * @returns {JSX.Element} - The loading state
+   */
   if (loading) {
     return (
-      <div className="container mx-auto p-4">
-        <div className="flex justify-center items-center py-12">
-          <span className="text-gray-500">Lade Dashboard...</span>
-        </div>
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     )
   }
 
+  /**
+   * Render the error state
+   * @returns {JSX.Element} - The error state
+   */
   if (error) {
     return (
-      <div className="container mx-auto p-4">
-        <div className="flex justify-center items-center py-12">
-          <span className="text-red-500">Fehler: {error}</span>
+      <div className="container mx-auto px-4 py-8">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-600">
+          {error}
         </div>
       </div>
     )
   }
 
+  /**
+   * Render the dashboard
+   * @returns {JSX.Element} - The dashboard
+   */
   return (
-    <div className="container mx-auto p-4">
-      {renderEvents()}
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-3xl font-bold mb-8">Dashboard</h1>
+      
+      {/* Statistiken */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Gesamt Events</h3>
+          <p className="text-3xl font-bold text-blue-600">{stats.totalEvents}</p>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Anstehende Events</h3>
+          <p className="text-3xl font-bold text-green-600">{stats.upcomingEvents}</p>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Teilnehmer gesamt</h3>
+          <p className="text-3xl font-bold text-purple-600">{stats.totalParticipants}</p>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="mb-6">
+        <div className="border-b border-gray-200">
+          <nav className="-mb-px flex space-x-8">
+            <button
+              onClick={() => setActiveTab('created')}
+              className={`${
+                activeTab === 'created'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+            >
+              Erstellte Events
+            </button>
+            <button
+              onClick={() => setActiveTab('participated')}
+              className={`${
+                activeTab === 'participated'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+            >
+              Besuchte Events
+            </button>
+          </nav>
+        </div>
+      </div>
+
+      {/* Aktuelle Events */}
+      <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-semibold">
+            {activeTab === 'created' ? 'Meine Events' : 'Events an denen ich teilnehme'}
+          </h2>
+          {activeTab === 'created' && (
+            <button
+              onClick={handleCreateEvent}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Neues Event erstellen
+            </button>
+          )}
+        </div>
+
+        {getActiveEvents().length === 0 ? (
+          <p className="text-gray-500 text-center py-4">
+            {activeTab === 'created' 
+              ? 'Sie haben noch keine Events erstellt'
+              : 'Sie nehmen noch an keinen Events teil'}
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {getActiveEvents().map(event => (
+              <EventCard
+                key={event._id}
+                event={event}
+                onEdit={activeTab === 'created' ? () => handleEditEvent(event) : undefined}
+                onDelete={activeTab === 'created' ? async () => {
+                  try {
+                    const userEvents = await loadUserEvents()
+                    if (userEvents) {
+                      updateStats(userEvents.filter(e => e._id !== event._id))
+                    }
+                  } catch (err) {
+                    console.error('Fehler beim Aktualisieren nach Löschen:', err)
+                  }
+                } : undefined}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Event Modal */}
+      {showModal && (
+        <EventModal
+          event={selectedEvent}
+          onClose={handleCloseModal}
+          isEdit={!!selectedEvent}
+        />
+      )}
     </div>
   )
 }

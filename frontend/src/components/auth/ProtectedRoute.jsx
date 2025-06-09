@@ -1,10 +1,19 @@
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 
+/**
+ * ProtectedRoute component
+ * @param {Object} children - The children components
+ * @returns {JSX.Element} - The ProtectedRoute component
+ */
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth()
   const location = useLocation()
 
+  /**
+   * Render the loading state
+   * @returns {JSX.Element} - The loading state
+   */
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -13,8 +22,11 @@ const ProtectedRoute = ({ children }) => {
     )
   }
 
+  /**
+   * Render the not authenticated state
+   * @returns {JSX.Element} - The not authenticated state
+   */
   if (!isAuthenticated) {
-    // Speichere die aktuelle URL für die Weiterleitung nach dem Login
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 

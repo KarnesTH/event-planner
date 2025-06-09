@@ -1,8 +1,17 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import useEvents from '../../hooks/useEvents';
 
-const EventModal = ({ event, onClose, onSubmit, isEdit = false }) => {
+/**
+ * EventModal component
+ * @param {Object} event - The event
+ * @param {Function} onClose - The function to close the modal
+ * @param {boolean} isEdit - Whether the modal is in edit mode
+ * @returns {JSX.Element} - The EventModal component
+ */
+const EventModal = ({ event, onClose, isEdit = false }) => {
     const navigate = useNavigate();
+    const { createEvent, updateEvent } = useEvents();
     const [formData, setFormData] = useState({
         title: "",
         description: "",
@@ -22,7 +31,7 @@ const EventModal = ({ event, onClose, onSubmit, isEdit = false }) => {
             }
         },
         category: "Konzert",
-        imageUrl: "/placeholder-event.jpg",
+        imageUrl: "/placeholder-image.svg",
         maxParticipants: null,
         tags: [],
         status: "draft",
@@ -35,21 +44,13 @@ const EventModal = ({ event, onClose, onSubmit, isEdit = false }) => {
     const [imagePreview, setImagePreview] = useState(null);
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef(null);
+    const [submitting, setSubmitting] = useState(false);
+    const [error, setError] = useState(null);
 
-    useEffect(() => {
-        if (event) {
-            setFormData({
-                ...event,
-                date: new Date(event.date).toISOString().slice(0, 16),
-                endDate: new Date(event.endDate).toISOString().slice(0, 16)
-            });
-            if (event.imageUrl) {
-                setImagePreview(event.imageUrl);
-            }
-        }
-    }, [event]);
-
-    const geocodeAddress = async () => {
+    /**
+     * Geocode the address
+     */
+    const geocodeAddress = useCallback(async () => {
         const { street, city, postalCode, country } = formData.location.address;
         if (!city) return;
 
@@ -73,17 +74,29 @@ const EventModal = ({ event, onClose, onSubmit, isEdit = false }) => {
             
             if (data && data.length > 0) {
                 const { lat, lon } = data[0];
+                const coordinates = [Number(lon), Number(lat)];
                 setFormData(prev => ({
                     ...prev,
                     location: {
                         ...prev.location,
                         coordinates: {
                             type: "Point",
-                            coordinates: [parseFloat(lon), parseFloat(lat)]
+                            coordinates
                         }
                     }
                 }));
+                setErrors(prev => ({ ...prev, geocoding: null }));
             } else {
+                setFormData(prev => ({
+                    ...prev,
+                    location: {
+                        ...prev.location,
+                        coordinates: {
+                            type: "Point",
+                            coordinates: [0, 0]
+                        }
+                    }
+                }));
                 setErrors(prev => ({
                     ...prev,
                     geocoding: "Adresse konnte nicht gefunden werden"
@@ -91,6 +104,16 @@ const EventModal = ({ event, onClose, onSubmit, isEdit = false }) => {
             }
         } catch (error) {
             console.error("Geocoding-Fehler:", error);
+            setFormData(prev => ({
+                ...prev,
+                location: {
+                    ...prev.location,
+                    coordinates: {
+                        type: "Point",
+                        coordinates: [0, 0]
+                    }
+                }
+            }));
             setErrors(prev => ({
                 ...prev,
                 geocoding: "Fehler beim Geocoding der Adresse"
@@ -98,7 +121,7 @@ const EventModal = ({ event, onClose, onSubmit, isEdit = false }) => {
         } finally {
             setIsGeocoding(false);
         }
-    };
+    }, [formData.location.address]);
 
     useEffect(() => {
         const { street, city, postalCode } = formData.location.address;
@@ -106,8 +129,37 @@ const EventModal = ({ event, onClose, onSubmit, isEdit = false }) => {
             const timeoutId = setTimeout(geocodeAddress, 1000);
             return () => clearTimeout(timeoutId);
         }
-    }, [formData.location.address.street, formData.location.address.city, formData.location.address.postalCode]);
+    }, [formData.location.address.street, formData.location.address.city, formData.location.address.postalCode, geocodeAddress]);
 
+    /**
+     * Use effect to set the form data
+     */
+    useEffect(() => {
+        if (event) {
+            const coordinates = event.location?.coordinates?.coordinates || [0, 0];
+            const eventData = {
+                ...event,
+                date: new Date(event.date).toISOString().slice(0, 16),
+                endDate: new Date(event.endDate).toISOString().slice(0, 16),
+                location: {
+                    ...event.location,
+                    coordinates: {
+                        type: "Point",
+                        coordinates: coordinates.map(Number)
+                    }
+                }
+            }
+            setFormData(eventData)
+            if (event.imageUrl) {
+                setImagePreview(event.imageUrl)
+            }
+        }
+    }, [event])
+
+    /**
+     * Handle the change
+     * @param {Event} e - The event
+     */
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
         
@@ -182,44 +234,85 @@ const EventModal = ({ event, onClose, onSubmit, isEdit = false }) => {
         return Object.keys(newErrors).length === 0;
     };
 
+    const formatEventData = (data) => {
+        const [lng, lat] = data.location.coordinates.coordinates
+
+        return {
+            ...data,
+            date: new Date(data.date).toISOString(),
+            endDate: new Date(data.endDate).toISOString(),
+            location: {
+                name: data.location.name,
+                address: data.location.address,
+                coordinates: {
+                    lat,
+                    lng
+                }
+            }
+        }
+    }
+
     const handleSubmit = async (e) => {
-        e.preventDefault();
-        
-        if (!validateForm()) return;
+        e.preventDefault()
+        setSubmitting(true)
+        setError(null)
 
         try {
-            if (isGeocoding) {
-                await new Promise(resolve => setTimeout(resolve, 1000));
+            if (!validateForm()) {
+                throw new Error('Bitte füllen Sie alle erforderlichen Felder aus')
             }
 
-            const submitData = {
-                ...formData,
-                maxParticipants: formData.maxParticipants === "" ? null : Number(formData.maxParticipants),
-                location: {
-                    ...formData.location,
-                    coordinates: formData.location.coordinates.coordinates[0] !== 0 ? {
-                        lat: formData.location.coordinates.coordinates[1],
-                        lng: formData.location.coordinates.coordinates[0]
-                    } : undefined
+            if (isEdit && event) {
+                const changedFields = {}
+                
+                if (formData.title !== event.title) changedFields.title = formData.title
+                if (formData.description !== event.description) changedFields.description = formData.description
+                if (formData.date !== event.date) changedFields.date = new Date(formData.date).toISOString()
+                if (formData.endDate !== event.endDate) changedFields.endDate = new Date(formData.endDate).toISOString()
+                if (formData.category !== event.category) changedFields.category = formData.category
+                if (formData.imageUrl !== event.imageUrl) changedFields.imageUrl = formData.imageUrl
+                if (formData.maxParticipants !== event.maxParticipants) changedFields.maxParticipants = formData.maxParticipants
+                if (formData.status !== event.status) changedFields.status = formData.status
+                if (formData.isPublic !== event.isPublic) changedFields.isPublic = formData.isPublic
+                if (JSON.stringify(formData.tags) !== JSON.stringify(event.tags)) changedFields.tags = formData.tags
+
+                const locationChanged = 
+                    formData.location.name !== event.location.name || 
+                    JSON.stringify(formData.location.address) !== JSON.stringify(event.location.address) ||
+                    JSON.stringify(formData.location.coordinates) !== JSON.stringify(event.location.coordinates)
+
+                if (locationChanged) {
+                    const coordinates = [
+                        Number(formData.location.coordinates.coordinates[0]),
+                        Number(formData.location.coordinates.coordinates[1])
+                    ]
+                    
+                    changedFields.location = {
+                        name: formData.location.name,
+                        address: formData.location.address,
+                        coordinates: {
+                            type: 'Point',
+                            coordinates: coordinates
+                        }
+                    }
                 }
-            };
 
-            if (!submitData.location.address.street) delete submitData.location.address.street;
-            if (!submitData.location.address.city) delete submitData.location.address.city;
-            if (!submitData.location.address.postalCode) delete submitData.location.address.postalCode;
-            if (!submitData.location.address.country) delete submitData.location.address.country;
-
-            if (!submitData.location.coordinates?.lat || !submitData.location.coordinates?.lng ||
-                isNaN(submitData.location.coordinates.lat) || isNaN(submitData.location.coordinates.lng)) {
-                delete submitData.location.coordinates;
+                if (Object.keys(changedFields).length > 0) {
+                    await updateEvent(event._id, changedFields)
+                }
+            } else {
+                const submitData = formatEventData(formData)
+                await createEvent(submitData)
             }
-
-            await onSubmit(submitData);
-            onClose();
-        } catch (error) {
-            setErrors({ submit: error.message });
+            
+            onClose()
+        } catch (err) {
+            console.error('Submit-Fehler:', err)
+            setError(err.response?.data?.message || err.message || 'Ein Fehler ist aufgetreten')
+        } finally {
+            setSubmitting(false)
         }
-    };
+    }
 
     const handleImageChange = async (e) => {
         const file = e.target.files?.[0];
@@ -269,7 +362,6 @@ const EventModal = ({ event, onClose, onSubmit, isEdit = false }) => {
 
             const data = await response.json();
             
-            // Setze die URL des hochgeladenen Bildes
             setImagePreview(`http://localhost:5000${data.url}`);
             setFormData(prev => ({
                 ...prev,
@@ -288,7 +380,7 @@ const EventModal = ({ event, onClose, onSubmit, isEdit = false }) => {
     const handleRemoveImage = async () => {
         try {
             const currentImageUrl = formData.imageUrl;
-            if (currentImageUrl && currentImageUrl !== '/placeholder-event.jpg') {
+            if (currentImageUrl && currentImageUrl !== '/placeholder-image.svg') {
                 const filename = currentImageUrl.split('/').pop();
                 const token = localStorage.getItem('token');
                 
@@ -305,7 +397,7 @@ const EventModal = ({ event, onClose, onSubmit, isEdit = false }) => {
             setImagePreview(null);
             setFormData(prev => ({
                 ...prev,
-                imageUrl: '/placeholder-event.jpg'
+                imageUrl: '/placeholder-image.svg'
             }));
             if (fileInputRef.current) {
                 fileInputRef.current.value = '';
@@ -431,7 +523,7 @@ const EventModal = ({ event, onClose, onSubmit, isEdit = false }) => {
 
                         {/* Titel */}
                         <div>
-                            <label htmlFor="title" className="block text-sm font-medium text-gray-700">
+                            <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
                                 Titel
                             </label>
                             <input
@@ -440,9 +532,10 @@ const EventModal = ({ event, onClose, onSubmit, isEdit = false }) => {
                                 name="title"
                                 value={formData.title}
                                 onChange={handleChange}
-                                className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${
+                                className={`block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm h-10 px-3 ${
                                     errors.title ? "border-red-500" : ""
                                 }`}
+                                placeholder="Titel des Events"
                             />
                             {errors.title && (
                                 <p className="mt-1 text-sm text-red-600">{errors.title}</p>
@@ -451,7 +544,7 @@ const EventModal = ({ event, onClose, onSubmit, isEdit = false }) => {
 
                         {/* Beschreibung */}
                         <div>
-                            <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+                            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
                                 Beschreibung
                             </label>
                             <textarea
@@ -460,9 +553,10 @@ const EventModal = ({ event, onClose, onSubmit, isEdit = false }) => {
                                 rows={4}
                                 value={formData.description}
                                 onChange={handleChange}
-                                className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${
+                                className={`block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-3 py-2 ${
                                     errors.description ? "border-red-500" : ""
                                 }`}
+                                placeholder="Beschreibe dein Event..."
                             />
                             {errors.description && (
                                 <p className="mt-1 text-sm text-red-600">{errors.description}</p>
@@ -472,7 +566,7 @@ const EventModal = ({ event, onClose, onSubmit, isEdit = false }) => {
                         {/* Datum und Zeit */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                                <label htmlFor="date" className="block text-sm font-medium text-gray-700">
+                                <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-1">
                                     Startdatum und -zeit
                                 </label>
                                 <input
@@ -481,7 +575,7 @@ const EventModal = ({ event, onClose, onSubmit, isEdit = false }) => {
                                     name="date"
                                     value={formData.date}
                                     onChange={handleChange}
-                                    className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${
+                                    className={`block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm h-10 px-3 ${
                                         errors.date ? "border-red-500" : ""
                                     }`}
                                 />
@@ -490,7 +584,7 @@ const EventModal = ({ event, onClose, onSubmit, isEdit = false }) => {
                                 )}
                             </div>
                             <div>
-                                <label htmlFor="endDate" className="block text-sm font-medium text-gray-700">
+                                <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 mb-1">
                                     Enddatum und -zeit
                                 </label>
                                 <input
@@ -499,7 +593,7 @@ const EventModal = ({ event, onClose, onSubmit, isEdit = false }) => {
                                     name="endDate"
                                     value={formData.endDate}
                                     onChange={handleChange}
-                                    className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${
+                                    className={`block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm h-10 px-3 ${
                                         errors.endDate ? "border-red-500" : ""
                                     }`}
                                 />
@@ -512,7 +606,7 @@ const EventModal = ({ event, onClose, onSubmit, isEdit = false }) => {
                         {/* Veranstaltungsort */}
                         <div className="space-y-4">
                             <div>
-                                <label htmlFor="location.name" className="block text-sm font-medium text-gray-700">
+                                <label htmlFor="location.name" className="block text-sm font-medium text-gray-700 mb-1">
                                     Veranstaltungsort
                                 </label>
                                 <input
@@ -521,9 +615,10 @@ const EventModal = ({ event, onClose, onSubmit, isEdit = false }) => {
                                     name="location.name"
                                     value={formData.location.name}
                                     onChange={handleChange}
-                                    className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${
+                                    className={`block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm h-10 px-3 ${
                                         errors["location.name"] ? "border-red-500" : ""
                                     }`}
+                                    placeholder="z.B. Stadthalle, Restaurant, etc."
                                 />
                                 {errors["location.name"] && (
                                     <p className="mt-1 text-sm text-red-600">{errors["location.name"]}</p>
@@ -531,7 +626,7 @@ const EventModal = ({ event, onClose, onSubmit, isEdit = false }) => {
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <label htmlFor="location.address.street" className="block text-sm font-medium text-gray-700">
+                                    <label htmlFor="location.address.street" className="block text-sm font-medium text-gray-700 mb-1">
                                         Straße
                                     </label>
                                     <input
@@ -540,11 +635,12 @@ const EventModal = ({ event, onClose, onSubmit, isEdit = false }) => {
                                         name="location.address.street"
                                         value={formData.location.address.street}
                                         onChange={handleChange}
-                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm h-10 px-3"
+                                        placeholder="Straße und Hausnummer"
                                     />
                                 </div>
                                 <div>
-                                    <label htmlFor="location.address.city" className="block text-sm font-medium text-gray-700">
+                                    <label htmlFor="location.address.city" className="block text-sm font-medium text-gray-700 mb-1">
                                         Stadt *
                                     </label>
                                     <input
@@ -554,11 +650,12 @@ const EventModal = ({ event, onClose, onSubmit, isEdit = false }) => {
                                         value={formData.location.address.city}
                                         onChange={handleChange}
                                         required
-                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm h-10 px-3"
+                                        placeholder="Stadt"
                                     />
                                 </div>
                                 <div>
-                                    <label htmlFor="location.address.postalCode" className="block text-sm font-medium text-gray-700">
+                                    <label htmlFor="location.address.postalCode" className="block text-sm font-medium text-gray-700 mb-1">
                                         Postleitzahl
                                     </label>
                                     <input
@@ -567,11 +664,12 @@ const EventModal = ({ event, onClose, onSubmit, isEdit = false }) => {
                                         name="location.address.postalCode"
                                         value={formData.location.address.postalCode}
                                         onChange={handleChange}
-                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm h-10 px-3"
+                                        placeholder="PLZ"
                                     />
                                 </div>
                                 <div>
-                                    <label htmlFor="location.address.country" className="block text-sm font-medium text-gray-700">
+                                    <label htmlFor="location.address.country" className="block text-sm font-medium text-gray-700 mb-1">
                                         Land
                                     </label>
                                     <input
@@ -580,27 +678,23 @@ const EventModal = ({ event, onClose, onSubmit, isEdit = false }) => {
                                         name="location.address.country"
                                         value={formData.location.address.country}
                                         onChange={handleChange}
-                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm h-10 px-3"
+                                        placeholder="Land"
                                     />
                                 </div>
                             </div>
                             {isGeocoding && (
-                                <p className="text-sm text-gray-500">Suche nach Koordinaten...</p>
+                                <p className="text-sm text-gray-500">Suche nach Adresse...</p>
                             )}
                             {errors.geocoding && (
                                 <p className="text-sm text-red-600">{errors.geocoding}</p>
-                            )}
-                            {formData.location.coordinates.coordinates[0] !== 0 && (
-                                <p className="text-sm text-green-600">
-                                    Koordinaten gefunden: {formData.location.coordinates.coordinates[1].toFixed(6)}, {formData.location.coordinates.coordinates[0].toFixed(6)}
-                                </p>
                             )}
                         </div>
 
                         {/* Kategorie und Teilnehmer */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                                <label htmlFor="category" className="block text-sm font-medium text-gray-700">
+                                <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
                                     Kategorie
                                 </label>
                                 <select
@@ -608,7 +702,7 @@ const EventModal = ({ event, onClose, onSubmit, isEdit = false }) => {
                                     name="category"
                                     value={formData.category}
                                     onChange={handleChange}
-                                    className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${
+                                    className={`block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm h-10 px-3 ${
                                         errors.category ? "border-red-500" : ""
                                     }`}
                                 >
@@ -624,7 +718,7 @@ const EventModal = ({ event, onClose, onSubmit, isEdit = false }) => {
                                 )}
                             </div>
                             <div>
-                                <label htmlFor="maxParticipants" className="block text-sm font-medium text-gray-700">
+                                <label htmlFor="maxParticipants" className="block text-sm font-medium text-gray-700 mb-1">
                                     Maximale Teilnehmerzahl (optional)
                                 </label>
                                 <input
@@ -634,7 +728,8 @@ const EventModal = ({ event, onClose, onSubmit, isEdit = false }) => {
                                     value={formData.maxParticipants === null ? "" : formData.maxParticipants}
                                     onChange={handleChange}
                                     min="1"
-                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm h-10 px-3"
+                                    placeholder="z.B. 50"
                                 />
                             </div>
                         </div>
@@ -714,9 +809,9 @@ const EventModal = ({ event, onClose, onSubmit, isEdit = false }) => {
                             </div>
                         </div>
 
-                        {errors.submit && (
+                        {error && (
                             <div className="rounded-md bg-red-50 p-4">
-                                <p className="text-sm text-red-600">{errors.submit}</p>
+                                <p className="text-sm text-red-600">{error}</p>
                             </div>
                         )}
 

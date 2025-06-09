@@ -1,109 +1,122 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 
-const SearchBar = ({ onSearch, onFilter, initialSearchTerm = '', initialCategory = '' }) => {
-  const [searchTerm, setSearchTerm] = useState(initialSearchTerm);
-  const [category, setCategory] = useState(initialCategory);
-  const [isSearching, setIsSearching] = useState(false);
-  const [isFiltering, setIsFiltering] = useState(false);
+/**
+ * SearchBar component
+ * @param {Object} filters - The filters
+ * @param {Function} onFilterChange - The function to change the filters
+ * @param {Object} events - The events
+ * @param {boolean} isHomePage - Whether the component is on the home page
+ */
+const SearchBar = ({ 
+  filters, 
+  onFilterChange, 
+  events,
+  isHomePage = false
+}) => {
+  const navigate = useNavigate()
+  const [searchInput, setSearchInput] = useState('')
+  const [categoryInput, setCategoryInput] = useState('')
 
-  useEffect(() => {
-    setSearchTerm(initialSearchTerm);
-    setCategory(initialCategory);
-  }, [initialSearchTerm, initialCategory]);
-
-  const handleSearchChange = useCallback(async (e) => {
-    const value = e.target.value;
-    setSearchTerm(value);
-    if (onSearch) {
-      setIsSearching(true);
-      try {
-        await onSearch(value);
-      } finally {
-        setIsSearching(false);
-      }
+  /**
+   * Handle the search change
+   * @param {Event} e - The event
+   */
+  const handleSearchChange = useCallback((e) => {
+    const value = e.target.value
+    setSearchInput(value)
+    
+    if (!isHomePage) {
+      // Nur auf der EventsPage direkt filtern
+      onFilterChange({ search: value })
     }
-  }, [onSearch]);
+  }, [onFilterChange, isHomePage])
 
-  const handleCategoryChange = useCallback(async (e) => {
-    const value = e.target.value;
-    setCategory(value);
-    if (onFilter) {
-      setIsFiltering(true);
-      try {
-        await onFilter(value);
-      } finally {
-        setIsFiltering(false);
-      }
+  /**
+   * Handle the category change
+   * @param {Event} e - The event
+   */
+  const handleCategoryChange = useCallback((e) => {
+    const category = e.target.value
+    setCategoryInput(category)
+    
+    if (!isHomePage) {
+      // Nur auf der EventsPage direkt filtern
+      onFilterChange({ category })
     }
-  }, [onFilter]);
+  }, [onFilterChange, isHomePage])
 
-  const handleReset = useCallback(async () => {
-    setSearchTerm('');
-    setCategory('');
-    if (onSearch || onFilter) {
-      setIsSearching(true);
-      setIsFiltering(true);
-      try {
-        await Promise.all([
-          onSearch?.(''),
-          onFilter?.('')
-        ]);
-      } finally {
-        setIsSearching(false);
-        setIsFiltering(false);
-      }
+  /**
+   * Handle the submit
+   * @param {Event} e - The event
+   */
+  const handleSubmit = useCallback((e) => {
+    e.preventDefault()
+    
+    if (isHomePage) {
+      // Auf der HomePage zur EventsPage navigieren
+      navigate('/events', { 
+        state: { 
+          initialSearch: searchInput,
+          initialCategory: categoryInput 
+        }
+      })
     }
-  }, [onSearch, onFilter]);
+  }, [isHomePage, navigate, searchInput, categoryInput])
 
+  /**
+   * Display the search input
+   * @returns {string} - The search input
+   */
+  const displaySearch = isHomePage ? searchInput : (filters.search || '')
+
+  /**
+   * Display the category input
+   * @returns {string} - The category input
+   */
+  const displayCategory = isHomePage ? categoryInput : (filters.category || '')
+
+  /**
+   * Render the search bar
+   * @returns {JSX.Element} - The search bar
+   */
   return (
-    <div className="w-full max-w-2xl mx-auto space-y-4">
-      <div className="relative flex items-center">
-        <div className="absolute left-3 text-gray-400">
-          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
+    <form onSubmit={handleSubmit} className="w-full max-w-4xl mx-auto">
+      <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex-1">
+          <input
+            type="text"
+            value={displaySearch}
+            onChange={handleSearchChange}
+            placeholder="Nach Events suchen..."
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
         </div>
-        <input
-          type="text"
-          value={searchTerm}
-          onChange={handleSearchChange}
-          placeholder="Nach Events suchen..."
-          disabled={isSearching || isFiltering}
-          className={`w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm ${
-            isSearching || isFiltering ? 'opacity-50 cursor-not-allowed' : ''
-          }`}
-        />
-      </div>
-
-      <div className="flex items-center space-x-4">
-        <select
-          value={category}
-          onChange={handleCategoryChange}
-          disabled={isSearching || isFiltering}
-          aria-label="Kategorie"
-          className={`px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm ${
-            isSearching || isFiltering ? 'opacity-50 cursor-not-allowed' : ''
-          }`}
-        >
-          <option value="">Alle Kategorien</option>
-          <option value="Workshop">Workshop</option>
-          <option value="Konzert">Konzert</option>
-          <option value="Vortrag">Vortrag</option>
-          <option value="Networking">Networking</option>
-        </select>
+        
+        <div className="w-full md:w-48">
+          <select
+            value={displayCategory}
+            onChange={handleCategoryChange}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="">Alle Kategorien</option>
+            <option value="Konzert">Konzerte</option>
+            <option value="Workshop">Workshops</option>
+            <option value="Networking">Networking</option>
+            <option value="Sport">Sport</option>
+            <option value="Kultur">Kultur</option>
+          </select>
+        </div>
 
         <button
-          onClick={handleReset}
-          disabled={isSearching || isFiltering}
-          className={`px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition-colors duration-200 ${
-            isSearching || isFiltering ? 'opacity-50 cursor-not-allowed' : ''
-          }`}
+          type="submit"
+          className="w-full md:w-auto px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
-          Filter zurücksetzen
+          {isHomePage ? 'Events entdecken' : 'Suchen'}
         </button>
       </div>
-    </div>
-  );
-};
+    </form>
+  )
+}
 
-export default SearchBar;
+export default SearchBar

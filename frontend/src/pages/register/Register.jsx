@@ -2,6 +2,10 @@ import { useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { Link } from 'react-router-dom'
 
+/**
+ * Register component
+ * @returns {JSX.Element} - The register component
+ */
 const Register = () => {
   const { register } = useAuth()
   const [formData, setFormData] = useState({
@@ -17,6 +21,10 @@ const Register = () => {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
 
+  /**
+   * Validate the form
+   * @returns {boolean} - Whether the form is valid
+   */
   const validateForm = () => {
     const newErrors = {}
     if (!formData.firstName.trim()) {
@@ -43,6 +51,10 @@ const Register = () => {
     return Object.keys(newErrors).length === 0
   }
 
+  /**
+   * Handle the submit
+   * @param {Event} e - The event
+   */
   const handleSubmit = async (e) => {
     e.preventDefault()
     setSubmitError('')
@@ -67,6 +79,10 @@ const Register = () => {
     }
   }
 
+  /**
+   * Handle the change
+   * @param {Event} e - The event
+   */
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
     setFormData(prev => ({
@@ -79,6 +95,10 @@ const Register = () => {
     }
   }
 
+  /**
+   * Render the register
+   * @returns {JSX.Element} - The register
+   */
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">

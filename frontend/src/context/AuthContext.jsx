@@ -5,13 +5,17 @@ const API_BASE_URL = 'http://localhost:5000/api/v1'
 
 const AuthContext = createContext(null)
 
+/**
+ * AuthProvider component
+ * @param {Object} children - The children components
+ * @returns {JSX.Element} - The AuthProvider component
+ */
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
 
   useEffect(() => {
-    // Beim Start der App prüfen, ob ein Token existiert
     const token = localStorage.getItem('token')
     if (token) {
       fetchUserData(token)
@@ -20,6 +24,10 @@ export const AuthProvider = ({ children }) => {
     }
   }, [])
 
+  /**
+   * Fetch the user data
+   * @param {string} token - The token
+   */
   const fetchUserData = async (token) => {
     try {
       const response = await fetch(`${API_BASE_URL}/auth/me`, {
@@ -44,6 +52,12 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
+  /**
+   * Login function
+   * @param {string} email - The email
+   * @param {string} password - The password
+   * @returns {Object} - The login response
+   */
   const login = async (email, password) => {
     try {
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
@@ -70,6 +84,11 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
+  /**
+   * Register function
+   * @param {Object} userData - The user data
+   * @returns {Object} - The register response
+   */
   const register = async (userData) => {
     try {
       const response = await fetch(`${API_BASE_URL}/auth/register`, {
@@ -96,12 +115,19 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
+  /**
+   * Logout function
+   */
   const logout = () => {
     localStorage.removeItem('token')
     setUser(null)
     navigate('/')
   }
 
+  /**
+   * Auth context value
+   * @returns {Object} - The auth context value
+   */
   const value = {
     user,
     loading,
@@ -118,6 +144,10 @@ export const AuthProvider = ({ children }) => {
   )
 }
 
+/**
+ * useAuth hook
+ * @returns {Object} - The useAuth hook
+ */
 export const useAuth = () => {
   const context = useContext(AuthContext)
   if (!context) {

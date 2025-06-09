@@ -2,6 +2,10 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
 
+/**
+ * Navbar component
+ * @returns {JSX.Element} - The navbar component
+ */
 const Navbar = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false)
     const [isDropdownOpen, setIsDropdownOpen] = useState(false)
@@ -9,10 +13,16 @@ const Navbar = () => {
     const { user, logout } = useAuth()
     const navigate = useNavigate()
 
+    /**
+     * Toggle the menu
+     */
     const toggleMenu = () => {
         setIsMenuOpen(!isMenuOpen)
     }
 
+    /**
+     * Handle the logout
+     */
     const handleLogout = async () => {
         try {
             await logout()
@@ -22,6 +32,9 @@ const Navbar = () => {
         }
     }
 
+    /**
+     * Handle the click outside
+     */
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -33,6 +46,10 @@ const Navbar = () => {
         return () => document.removeEventListener('mousedown', handleClickOutside)
     }, [])
 
+    /**
+     * User dropdown
+     * @returns {JSX.Element} - The user dropdown
+     */
     const UserDropdown = () => (
         <div className="relative" ref={dropdownRef}>
             <button
@@ -83,6 +100,10 @@ const Navbar = () => {
         </div>
     )
 
+    /**
+     * Render the navbar
+     * @returns {JSX.Element} - The navbar
+     */
     return (
         <nav className="bg-gradient-to-r from-blue-900 to-blue-800 text-white shadow-lg">
             <div className="container mx-auto px-4">

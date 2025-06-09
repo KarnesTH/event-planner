@@ -5,7 +5,7 @@ import { auth } from '../middleware/auth.js';
 const router = express.Router();
 
 /**
- * @description: Holt Events mit optionaler Geolocation-Filterung
+ * @description: Get events with optional geolocation filtering
  */
 router.get('/', async (req, res) => {
     try {
@@ -23,7 +23,11 @@ router.get('/', async (req, res) => {
         if (search) {
             query.$or = [
                 { title: { $regex: search, $options: 'i' } },
-                { description: { $regex: search, $options: 'i' } }
+                { description: { $regex: search, $options: 'i' } },
+                { 'location.name': { $regex: search, $options: 'i' } },
+                { 'location.address.city': { $regex: search, $options: 'i' } },
+                { 'location.address.street': { $regex: search, $options: 'i' } },
+                { tags: { $regex: search, $options: 'i' } }
             ];
         }
 
@@ -105,7 +109,7 @@ router.get('/', async (req, res) => {
 });
 
 /**
- * @description: Holt alle Events eines Benutzers (organisiert und teilgenommen)
+ * @description: Get all events of a user (organized and participated)
  */
 router.get('/my-events', auth, async (req, res) => {
     try {
@@ -136,7 +140,7 @@ router.get('/my-events', auth, async (req, res) => {
 });
 
 /**
- * @description: Erstellt ein neues Event
+ * @description: Create a new event
  */
 router.post('/', auth, async (req, res) => {
     try {
@@ -170,7 +174,7 @@ router.post('/', auth, async (req, res) => {
 });
 
 /**
- * @description: Holt ein spezifisches Event nach ID
+ * @description: Get a specific event by ID
  */
 router.get('/:id', async (req, res) => {
     try {
@@ -202,7 +206,7 @@ router.get('/:id', async (req, res) => {
 });
 
 /**
- * @description: Aktualisiert ein Event
+ * @description: Update an event
  */
 router.put('/:id', auth, async (req, res) => {
     try {
@@ -230,7 +234,6 @@ router.put('/:id', auth, async (req, res) => {
             'isPublic'
         ];
 
-        // Validiere die Updates
         const invalidFields = Object.keys(req.body).filter(key => !allowedUpdates.includes(key));
         if (invalidFields.length > 0) {
             return res.status(400).json({
@@ -247,7 +250,6 @@ router.put('/:id', auth, async (req, res) => {
                 return obj;
             }, {});
 
-        // Spezielle Behandlung für location.coordinates
         if (updates.location?.coordinates) {
             const { lat, lng } = updates.location.coordinates;
             updates.location.coordinates = {
@@ -275,7 +277,7 @@ router.put('/:id', auth, async (req, res) => {
 });
 
 /**
- * @description: Löscht ein Event
+ * @description: Delete an event
  */
 router.delete('/:id', auth, async (req, res) => {
     try {
@@ -300,7 +302,7 @@ router.delete('/:id', auth, async (req, res) => {
 });
 
 /**
- * @description: Teilnahme an einem Event
+ * @description: Participate in an event
  */
 router.post('/:id/participate', auth, async (req, res) => {
     try {
@@ -343,7 +345,7 @@ router.post('/:id/participate', auth, async (req, res) => {
 });
 
 /**
- * @description: Teilnahme an einem Event stornieren
+ * @description: Cancel participation in an event
  */
 router.delete('/:id/participate', auth, async (req, res) => {
     try {
