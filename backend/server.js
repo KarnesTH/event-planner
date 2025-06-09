@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import eventRoutes from './routes/events.js';
 import authRoutes from './routes/auth.js';
 import uploadRoutes from './routes/upload.js';
+import healthRoutes from './routes/health.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -25,6 +26,7 @@ app.use(express.json());
 /**
  * Routes
  */
+app.use('/api/v1/health', healthRoutes);
 app.use('/api/v1/events', eventRoutes);
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/upload', uploadRoutes);

@@ -12,6 +12,12 @@ services:
     depends_on:
       ev-plan-db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     restart: unless-stopped
 
   ev-plan-db:
@@ -32,6 +38,23 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+
+  ev-plan-frontend:
+    build: ./frontend
+    ports:
+      - 80:80
+    networks:
+      - ev-plan-network
+    depends_on:
+      ev-plan-backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
 
 networks:
   ev-plan-network:
