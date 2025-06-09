@@ -4,6 +4,9 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+/**
+ * Update the event coordinates
+ */
 const updateEventCoordinates = async () => {
     try {
         await mongoose.connect(process.env.MONGODB_URI);

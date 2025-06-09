@@ -16,19 +16,29 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
+/**
+ * Middleware
+ */
 app.use(cors());
 app.use(express.json());
 
-// Routes
+/**
+ * Routes
+ */
 app.use('/api/v1/events', eventRoutes);
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/upload', uploadRoutes);
 
-// Statische Dateien
+/**
+ * Static Files
+ */
 app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 
-// Root Route
+/**
+ * Root Route
+ * @param {Object} req - The request object
+ * @param {Object} res - The response object
+ */
 app.get('/', (req, res) => {
     res.json({
         message: 'Server läuft',
@@ -43,7 +53,13 @@ app.get('/', (req, res) => {
     });
 });
 
-// Error Handling Middleware
+/**
+ * Error Handling Middleware
+ * @param {Object} err - The error object
+ * @param {Object} req - The request object
+ * @param {Object} res - The response object
+ * @param {Function} next - The next function
+ */
 app.use((err, req, res, next) => {
     console.error('Server Error:', err);
     res.status(500).json({
@@ -97,6 +113,11 @@ const startServer = async () => {
     }
 };
 
+/**
+ * @description: This is the function to start the server. If the file is run directly (not imported), the server is started. 
+ * @returns {Promise<void>} - A promise that resolves when the server is started.
+ * @throws {Error} - An error if the server fails to start.
+ */
 if (import.meta.url === `file://${process.argv[1]}`) {
     startServer();
 }

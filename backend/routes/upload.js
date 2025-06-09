@@ -10,6 +10,12 @@ const router = express.Router()
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
+/**
+ * Create the upload path
+ * @param {string} userId - The user id
+ * @param {string} type - The type of the upload
+ * @returns {string} - The upload path
+ */
 const createUploadPath = (userId, type) => {
   const baseDir = path.join(__dirname, '../public/uploads')
   const userDir = path.join(baseDir, userId.toString())
@@ -22,6 +28,11 @@ const createUploadPath = (userId, type) => {
   return typeDir
 }
 
+/**
+ * Get the storage
+ * @param {string} type - The type of the upload
+ * @returns {Object} - The storage
+ */
 const getStorage = (type) => multer.diskStorage({
   destination: (req, file, cb) => {
     const userId = req.user._id
@@ -34,6 +45,12 @@ const getStorage = (type) => multer.diskStorage({
   }
 })
 
+/**
+ * File filter
+ * @param {Object} req - The request object
+ * @param {Object} file - The file object
+ * @param {Function} cb - The callback function
+ */
 const fileFilter = (req, file, cb) => {
   const allowedTypes = ['image/jpeg', 'image/png', 'image/gif']
   if (allowedTypes.includes(file.mimetype)) {
@@ -43,6 +60,10 @@ const fileFilter = (req, file, cb) => {
   }
 }
 
+/**
+ * Upload image
+ * @returns {Object} - The upload image
+ */
 const uploadImage = multer({
   storage: getStorage('images'),
   fileFilter,
@@ -51,6 +72,10 @@ const uploadImage = multer({
   }
 })
 
+/**
+ * Upload avatar
+ * @returns {Object} - The upload avatar
+ */
 const uploadAvatar = multer({
   storage: getStorage('avatars'),
   fileFilter,
@@ -59,6 +84,10 @@ const uploadAvatar = multer({
   }
 })
 
+/**
+ * Upload image
+ * @returns {Object} - The upload image
+ */
 router.post('/', auth, uploadImage.single('image'), (req, res) => {
   try {
     if (!req.file) {
@@ -78,6 +107,10 @@ router.post('/', auth, uploadImage.single('image'), (req, res) => {
   }
 })
 
+/**
+ * Upload avatar
+ * @returns {Object} - The upload avatar
+ */
 router.post('/avatar', auth, uploadAvatar.single('image'), (req, res) => {
   try {
     if (!req.file) {
@@ -97,6 +130,10 @@ router.post('/avatar', auth, uploadAvatar.single('image'), (req, res) => {
   }
 })
 
+/**
+ * Delete image
+ * @returns {Object} - The delete image
+ */
 router.delete('/:filename', auth, (req, res) => {
   try {
     const userId = req.user._id
@@ -115,6 +152,10 @@ router.delete('/:filename', auth, (req, res) => {
   }
 })
 
+/**
+ * Delete avatar
+ * @returns {Object} - The delete avatar
+ */
 router.delete('/avatar/:filename', auth, (req, res) => {
   try {
     const userId = req.user._id
