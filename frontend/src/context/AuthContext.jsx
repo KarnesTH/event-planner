@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 const API_BASE_URL = 'http://localhost:5000/api/v1'
@@ -144,16 +144,4 @@ export const AuthProvider = ({ children }) => {
   )
 }
 
-/**
- * useAuth hook
- * @returns {Object} - The useAuth hook
- */
-const useAuth = () => {
-  const context = useContext(AuthContext)
-  if (!context) {
-    throw new Error('useAuth muss innerhalb eines AuthProviders verwendet werden')
-  }
-  return context
-}
-
-export default { AuthContext, useAuth }
+export default AuthContext

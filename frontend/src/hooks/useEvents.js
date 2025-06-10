@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import apiClient from '../services/api'
 
 /**
@@ -12,6 +12,7 @@ export const useEvents = (initialNearby = false) => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [showNearbyEvents, setShowNearbyEvents] = useState(initialNearby)
+  const [userLocation, setUserLocation] = useState(null)
   const [filters, setFilters] = useState({
     search: '',
     category: ''
@@ -22,7 +23,7 @@ export const useEvents = (initialNearby = false) => {
    * @param {Object} eventData - The event data
    * @returns {Object} - The created event
    */
-  const createEvent = useCallback(async (eventData) => {
+  const createEvent = async (eventData) => {
     try {
       setLoading(true)
       setError(null)
@@ -44,7 +45,7 @@ export const useEvents = (initialNearby = false) => {
     } finally {
       setLoading(false)
     }
-  }, [allEvents])
+  }
 
   /**
    * Update an existing event
@@ -52,7 +53,7 @@ export const useEvents = (initialNearby = false) => {
    * @param {Object} eventData - The event data
    * @returns {Object} - The updated event
    */
-  const updateEvent = useCallback(async (eventId, eventData) => {
+  const updateEvent = async (eventId, eventData) => {
     try {
       setLoading(true)
       setError(null)
@@ -68,13 +69,13 @@ export const useEvents = (initialNearby = false) => {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }
 
   /**
    * Delete an event
    * @param {string} eventId - The ID of the event
    */
-  const deleteEvent = useCallback(async (eventId) => {
+  const deleteEvent = async (eventId) => {
     try {
       setLoading(true)
       setError(null)
@@ -89,13 +90,13 @@ export const useEvents = (initialNearby = false) => {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }
 
   /**
    * Load user events
    * @returns {Object} - The user events
    */
-  const loadUserEvents = useCallback(async () => {
+  const loadUserEvents = async () => {
     try {
       setLoading(true)
       setError(null)
@@ -112,43 +113,61 @@ export const useEvents = (initialNearby = false) => {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }
+
+  /**
+   * Set user location and load nearby events
+   * @param {Object} coords - The coordinates
+   */
+  const setLocation = async (coords) => {
+    setUserLocation(coords)
+    setShowNearbyEvents(true)
+    await loadEvents(true, coords)
+  }
 
   /**
    * Load events
+   * @param {boolean} forceNearby - Whether to force loading nearby events
+   * @param {Object} coords - Optional coordinates to use
    */
-  useEffect(() => {
-    const loadEvents = async () => {
-      try {
-        setLoading(true)
-        setError(null)
-        
-        let params = {}
-        
-        if (showNearbyEvents) {
-          const position = await new Promise((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(resolve, reject)
-          })
-          
-          const { latitude, longitude } = position.coords
-          params = {
-            lat: latitude,
-            lng: longitude,
-            radius: 50
-          }
+  const loadEvents = async (forceNearby = false, coords = null) => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      let params = {}
+      
+      if (showNearbyEvents || forceNearby) {
+        const coordinates = coords || userLocation
+        if (!coordinates) {
+          setError('Standort ist nicht verfügbar')
+          setAllEvents([])
+          return
         }
         
-        const { data } = await apiClient.get('/events', { params })
-        const events = Array.isArray(data) ? data : data?.events || []
-        setAllEvents(events)
-      } catch (err) {
-        const errorMessage = err.response?.data?.message || err.message
-        setError(errorMessage)
-        setAllEvents([])
-      } finally {
-        setLoading(false)
+        params = {
+          lat: coordinates.latitude,
+          lng: coordinates.longitude,
+          radius: 50
+        }
       }
+      
+      const { data } = await apiClient.get('/events', { params })
+      const events = Array.isArray(data) ? data : data?.events || []
+      setAllEvents(events)
+    } catch (err) {
+      const errorMessage = err.response?.data?.message || err.message
+      setError(errorMessage)
+      setAllEvents([])
+    } finally {
+      setLoading(false)
     }
+  }
+
+  /**
+   * Load events on mount and when showNearbyEvents changes
+   */
+  useEffect(() => {
     loadEvents()
   }, [showNearbyEvents])
 
@@ -178,20 +197,20 @@ export const useEvents = (initialNearby = false) => {
    * Update the filters
    * @param {Object} newFilters - The new filters
    */
-  const updateFilters = useCallback((newFilters) => {
+  const updateFilters = (newFilters) => {
     if (newFilters.search !== undefined) {
       setShowNearbyEvents(false)
     }
     setFilters(prev => ({ ...prev, ...newFilters }))
-  }, [])
+  }
 
   /**
    * Toggle the nearby events
    */
-  const toggleNearbyEvents = useCallback(() => {
+  const toggleNearbyEvents = () => {
     setShowNearbyEvents(prev => !prev)
     setFilters(prev => ({ ...prev, search: '' }))
-  }, [])
+  }
 
   return {
     events: filteredEvents,
@@ -204,7 +223,8 @@ export const useEvents = (initialNearby = false) => {
     loadUserEvents,
     createEvent,
     updateEvent,
-    deleteEvent
+    deleteEvent,
+    setLocation
   }
 }
 
