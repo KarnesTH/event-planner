@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import apiClient from '../../services/api'
 import useEvents from '../../hooks/useEvents'
@@ -11,12 +11,11 @@ import EventModal from '../eventmodal/EventModal'
  * @param {Function} onUpdate - The function to update the event
  * @returns {JSX.Element} - The EventCard component
  */
-const EventCard = ({ event, onDelete, onUpdate }) => {
+const EventCard = ({ event, onDelete }) => {
   const navigate = useNavigate()
   const [isParticipating, setIsParticipating] = useState(event.isParticipating)
   const [currentUserId, setCurrentUserId] = useState(null)
   const [showEditModal, setShowEditModal] = useState(false)
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [loading, setLoading] = useState(false)
   
   const { participate, updateEvent, deleteEvent } = useEvents()
@@ -114,11 +113,6 @@ const EventCard = ({ event, onDelete, onUpdate }) => {
     try {
       const { 
         _id, 
-        organizer, 
-        participants, 
-        createdAt, 
-        updatedAt, 
-        __v,
         ...restData 
       } = updatedEventData
 

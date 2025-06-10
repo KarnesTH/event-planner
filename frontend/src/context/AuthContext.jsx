@@ -148,7 +148,7 @@ export const AuthProvider = ({ children }) => {
  * useAuth hook
  * @returns {Object} - The useAuth hook
  */
-export const useAuth = () => {
+const useAuth = () => {
   const context = useContext(AuthContext)
   if (!context) {
     throw new Error('useAuth muss innerhalb eines AuthProviders verwendet werden')
@@ -156,4 +156,4 @@ export const useAuth = () => {
   return context
 }
 
-export default AuthContext 
+export default { AuthContext, useAuth }

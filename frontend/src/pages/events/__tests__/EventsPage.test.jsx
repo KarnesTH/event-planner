@@ -91,12 +91,6 @@ describe('EventsPage', () => {
     );
   };
 
-  const waitForLoadingToFinish = async () => {
-    await waitFor(() => {
-      expect(screen.queryByText('Lade Events...')).not.toBeInTheDocument();
-    }, { timeout: 1000 });
-  };
-
   it('lädt und zeigt Events an', async () => {
     renderEventsPage();
     

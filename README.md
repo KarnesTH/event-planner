@@ -96,3 +96,7 @@ yarn test:coverage
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+### OpenStreetMap
+
+This OpenStreetMap is made available under the Open Database License: [ODBL](http://opendatacommons.org/licenses/odbl/1.0/). Any rights in individual contents of the database are licensed under the Database Contents License: [DBCL](http://opendatacommons.org/licenses/dbcl/1.0/)

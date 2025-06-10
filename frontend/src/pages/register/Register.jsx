@@ -65,7 +65,7 @@ const Register = () => {
 
     setIsSubmitting(true)
     try {
-      const { confirmPassword, acceptTerms, ...registerData } = formData
+      const { ...registerData } = formData
       const result = await register(registerData)
       
       if (!result.success) {

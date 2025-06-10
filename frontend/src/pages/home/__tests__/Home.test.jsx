@@ -1,5 +1,6 @@
 import { render, screen, act } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
+import { vi, describe, it, beforeEach, expect } from 'vitest'
 import Home from '../Home'
 
 vi.mock('../../../components/eventlist/EventList', () => ({

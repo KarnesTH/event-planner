@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { useAuth } from '../../context/AuthContext'
 import { Link } from 'react-router-dom'
 
 /**
@@ -7,7 +6,6 @@ import { Link } from 'react-router-dom'
  * @returns {JSX.Element} - The settings component
  */
 const Settings = () => {
-  const { user: authUser } = useAuth()
   const [activeTab, setActiveTab] = useState('profile')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)

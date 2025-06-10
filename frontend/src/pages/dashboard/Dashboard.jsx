@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useEvents from '../../hooks/useEvents'
 import EventModal from '../../components/eventmodal/EventModal'
@@ -24,7 +24,7 @@ const Dashboard = () => {
    * Update the statistics
    * @param {Object} userEvents - The user events
    */
-  const updateStats = useCallback((userEvents) => {
+  const updateStats = (userEvents) => {
     const now = new Date()
     const upcomingEvents = userEvents.filter(event => new Date(event.date) > now)
     const totalParticipants = userEvents.reduce((sum, event) => 
@@ -35,7 +35,7 @@ const Dashboard = () => {
       upcomingEvents: upcomingEvents.length,
       totalParticipants
     })
-  }, [])
+  }
 
   /**
    * Load the user events
@@ -49,6 +49,15 @@ const Dashboard = () => {
 
     loadUserEvents()
   }, [loadUserEvents, navigate])
+
+  /**
+   * Update the statistics
+   */
+  useEffect(() => {
+    if (events && Array.isArray(events)) {
+      updateStats(events)
+    }
+  }, [events])
 
   /**
    * Handle the creation of a new event

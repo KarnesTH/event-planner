@@ -9,7 +9,7 @@ import useEventDetail from '../../hooks/useEventDetail'
 const EventDetail = () => {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { loadEvent, participate, loading: apiLoading, error: apiError } = useEventDetail()
+  const { loadEvent, participate, error: apiError } = useEventDetail()
   const [event, setEvent] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)

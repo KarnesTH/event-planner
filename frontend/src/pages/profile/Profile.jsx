@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { useAuth } from '../../context/AuthContext'
 import { Link } from 'react-router-dom'
 
 /**
@@ -7,7 +6,6 @@ import { Link } from 'react-router-dom'
  * @returns {JSX.Element} - The profile component
  */
 const Profile = () => {
-  const { user: authUser } = useAuth()
   const [userData, setUserData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)

@@ -10,8 +10,7 @@ import { useNavigate } from 'react-router-dom'
  */
 const SearchBar = ({ 
   filters, 
-  onFilterChange, 
-  events,
+  onFilterChange,
   isHomePage = false
 }) => {
   const navigate = useNavigate()

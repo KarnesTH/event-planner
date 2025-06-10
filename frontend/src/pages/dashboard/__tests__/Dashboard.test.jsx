@@ -63,12 +63,12 @@ const renderDashboard = () => {
 describe('Dashboard', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    global.fetch = vi.fn()
+    globalThis.fetch = vi.fn()
     localStorage.clear()
   })
 
   it('zeigt den Ladezustand an', async () => {
-    global.fetch.mockImplementation(() => new Promise(() => {}))
+    globalThis.fetch.mockImplementation(() => new Promise(() => {}))
     renderDashboard()
     
     await waitFor(() => {
@@ -77,7 +77,7 @@ describe('Dashboard', () => {
   })
 
   it('zeigt Events korrekt an', async () => {
-    global.fetch.mockImplementation(() => 
+    globalThis.fetch.mockImplementation(() => 
       Promise.resolve({
         ok: true,
         json: () => Promise.resolve({ events: mockEvents })
@@ -115,7 +115,7 @@ describe('Dashboard', () => {
   })
 
   it('zeigt eine Fehlermeldung bei API-Fehlern', async () => {
-    global.fetch.mockImplementation(() => 
+    globalThis.fetch.mockImplementation(() => 
       Promise.reject(new Error('Netzwerkfehler'))
     )
 
@@ -128,7 +128,7 @@ describe('Dashboard', () => {
   })
 
   it('zeigt leere Listen korrekt an', async () => {
-    global.fetch.mockImplementation(() => 
+    globalThis.fetch.mockImplementation(() => 
       Promise.resolve({
         ok: true,
         json: () => Promise.resolve({ events: { organized: [], participating: [] } })

@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
 import useEvents from '../../hooks/useEvents';
 
 /**
@@ -10,7 +9,6 @@ import useEvents from '../../hooks/useEvents';
  * @returns {JSX.Element} - The EventModal component
  */
 const EventModal = ({ event, onClose, isEdit = false }) => {
-    const navigate = useNavigate();
     const { createEvent, updateEvent } = useEvents();
     const [formData, setFormData] = useState({
         title: "",
@@ -44,7 +42,7 @@ const EventModal = ({ event, onClose, isEdit = false }) => {
     const [imagePreview, setImagePreview] = useState(null);
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef(null);
-    const [submitting, setSubmitting] = useState(false);
+    const [_submitting, setSubmitting] = useState(false);
     const [error, setError] = useState(null);
 
     /**
@@ -129,7 +127,7 @@ const EventModal = ({ event, onClose, isEdit = false }) => {
             const timeoutId = setTimeout(geocodeAddress, 1000);
             return () => clearTimeout(timeoutId);
         }
-    }, [formData.location.address.street, formData.location.address.city, formData.location.address.postalCode, geocodeAddress]);
+    }, [formData.location.address, geocodeAddress]);
 
     /**
      * Use effect to set the form data
