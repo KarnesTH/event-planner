@@ -16,11 +16,13 @@ const Home = () => {
     error, 
     filters, 
     updateFilters,
-    setLocation
-  } = useEvents(false)
+    setLocation,
+    loadEvents
+  } = useEvents(false, false)
 
   const handleFilterChange = (newFilters) => {
     updateFilters(newFilters)
+    loadEvents(false)
   }
 
   const handleLocationPermission = (coords) => {

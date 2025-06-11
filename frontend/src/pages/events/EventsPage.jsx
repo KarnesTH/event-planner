@@ -19,8 +19,9 @@ const EventsPage = () => {
     filters, 
     updateFilters,
     showNearbyEvents,
-    toggleNearbyEvents
-  } = useEvents()
+    toggleNearbyEvents,
+    loadEvents
+  } = useEvents(false, false)
 
   /**
    * Handle the filter change
@@ -32,8 +33,9 @@ const EventsPage = () => {
         search: location.state.initialSearch || '',
         category: location.state.initialCategory || ''
       })
+      loadEvents(false)
     }
-  }, [location.state, updateFilters])
+  }, [location.state, updateFilters, loadEvents])
 
   /**
    * Handle the filter change

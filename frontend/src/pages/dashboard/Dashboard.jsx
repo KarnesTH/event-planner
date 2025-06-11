@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useEvents from '../../hooks/useEvents'
+import useAuth from '../../hooks/useAuth'
 import EventModal from '../../components/eventmodal/EventModal'
 import EventCard from '../../components/eventcard/EventCard'
 
@@ -10,7 +11,8 @@ import EventCard from '../../components/eventcard/EventCard'
  */
 const Dashboard = () => {
   const navigate = useNavigate()
-  const { events, loading, error, loadUserEvents } = useEvents()
+  const { user, isAuthenticated } = useAuth()
+  const { events, loading, error, loadEvents } = useEvents(false, true)
   const [showModal, setShowModal] = useState(false)
   const [selectedEvent, setSelectedEvent] = useState(null)
   const [activeTab, setActiveTab] = useState('created')
@@ -20,11 +22,32 @@ const Dashboard = () => {
     totalParticipants: 0
   })
 
-  /**
-   * Update the statistics
-   * @param {Object} userEvents - The user events
-   */
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/login')
+      return
+    }
+
+    const initializeDashboard = async () => {
+      const userEvents = await loadEvents(false, null, true)
+      if (userEvents?.length) {
+        updateStats(userEvents)
+      }
+    }
+
+    initializeDashboard()
+  }, [isAuthenticated])
+
   const updateStats = (userEvents) => {
+    if (!userEvents?.length) {
+      setStats({
+        totalEvents: 0,
+        upcomingEvents: 0,
+        totalParticipants: 0
+      })
+      return
+    }
+
     const now = new Date()
     const upcomingEvents = userEvents.filter(event => new Date(event.date) > now)
     const totalParticipants = userEvents.reduce((sum, event) => 
@@ -37,27 +60,30 @@ const Dashboard = () => {
     })
   }
 
-  /**
-   * Load the user events
-   */
-  useEffect(() => {
-    const token = localStorage.getItem('token')
-    if (!token) {
-      navigate('/login')
-      return
-    }
+  const getActiveEvents = () => {
+    if (!events?.length || !user?._id) return []
+    
+    return activeTab === 'created' 
+      ? events.filter(event => event.isOrganizer)
+      : events.filter(event => !event.isOrganizer)
+  }
 
-    loadUserEvents()
-  }, [loadUserEvents, navigate])
-
-  /**
-   * Update the statistics
-   */
-  useEffect(() => {
-    if (events && Array.isArray(events)) {
-      updateStats(events)
+  const handleCloseModal = async () => {
+    setShowModal(false)
+    setSelectedEvent(null)
+    
+    const userEvents = await loadEvents(false, null, true)
+    if (userEvents?.length) {
+      updateStats(userEvents)
     }
-  }, [events])
+  }
+
+  const handleDeleteEvent = async (eventId) => {
+    const userEvents = await loadEvents(false, null, true)
+    if (userEvents?.length) {
+      updateStats(userEvents)
+    }
+  }
 
   /**
    * Handle the creation of a new event
@@ -74,33 +100,6 @@ const Dashboard = () => {
   const handleEditEvent = (event) => {
     setSelectedEvent(event)
     setShowModal(true)
-  }
-
-  /**
-   * Handle the closing of the modal
-   */
-  const handleCloseModal = async () => {
-    setShowModal(false)
-    setSelectedEvent(null)
-    try {
-      const userEvents = await loadUserEvents()
-      if (userEvents) {
-        updateStats(userEvents)
-      }
-    } catch (err) {
-      console.error('Fehler beim Aktualisieren der Events:', err)
-    }
-  }
-
-  /**
-   * Get the active events
-   * @returns {Object} - The active events
-   */
-  const getActiveEvents = () => {
-    if (!events) return []
-    return activeTab === 'created' 
-      ? events.filter(event => event.organizer?._id === JSON.parse(localStorage.getItem('user'))?._id)
-      : events.filter(event => event.participants?.some(p => p._id === JSON.parse(localStorage.getItem('user'))?._id))
   }
 
   /**
@@ -212,16 +211,7 @@ const Dashboard = () => {
                 key={event._id}
                 event={event}
                 onEdit={activeTab === 'created' ? () => handleEditEvent(event) : undefined}
-                onDelete={activeTab === 'created' ? async () => {
-                  try {
-                    const userEvents = await loadUserEvents()
-                    if (userEvents) {
-                      updateStats(userEvents.filter(e => e._id !== event._id))
-                    }
-                  } catch (err) {
-                    console.error('Fehler beim Aktualisieren nach Löschen:', err)
-                  }
-                } : undefined}
+                onDelete={activeTab === 'created' ? handleDeleteEvent : undefined}
               />
             ))}
           </div>
