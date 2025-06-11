@@ -39,19 +39,19 @@ const AboutPage = () => {
     {
       name: 'Max Mustermann',
       role: 'Gründer & CEO',
-      image: '/team/max.jpg',
+      image: '/team/vicky-hladynets-C8Ta0gwPbQg-unsplash.jpg',
       bio: 'Leidenschaftlicher Event-Organisator mit über 10 Jahren Erfahrung in der Community-Bildung.'
     },
     {
       name: 'Anna Schmidt',
       role: 'Community Manager',
-      image: '/team/anna.jpg',
+      image: '/team/christopher-campbell-rDEOVtE7vOs-unsplash.jpg',
       bio: 'Expertin für Community-Management und Event-Organisation mit Fokus auf nachhaltige Communities.'
     },
     {
       name: 'Tom Weber',
       role: 'Technischer Leiter',
-      image: '/team/tom.jpg',
+      image: '/team/craig-mckay-jmURdhtm7Ng-unsplash.jpg',
       bio: 'Full-Stack Entwickler mit Erfahrung in der Entwicklung von Community-Plattformen.'
     }
   ]

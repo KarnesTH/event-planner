@@ -35,9 +35,9 @@ const LocationPermission = ({ onPermissionGranted }) => {
   return (
     <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
       <div className="text-center">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
           Events in deiner Nähe entdecken
-        </h3>
+        </h2>
         <p className="text-gray-600 mb-4">
           Um dir Events in deiner Umgebung anzuzeigen, benötigen wir Zugriff auf deinen Standort.
           Deine Daten werden nur für diese Funktion verwendet und nicht gespeichert.

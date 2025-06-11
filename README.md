@@ -100,3 +100,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ### OpenStreetMap
 
 This OpenStreetMap is made available under the Open Database License: [ODBL](http://opendatacommons.org/licenses/odbl/1.0/). Any rights in individual contents of the database are licensed under the Database Contents License: [DBCL](http://opendatacommons.org/licenses/dbcl/1.0/)
+
+Team Photos by:
+
+- Christopher Campbell [Female picture](https://unsplash.com/de/fotos/flachfokusfotografie-von-frauen-im-freien-wahrend-des-tages-rDEOVtE7vOs?utm_content=creditShareLink&utm_medium=referral&utm_source=unsplash)
+- Vicky Hladynets [Male picture 1](https://unsplash.com/de/fotos/mann-im-weissen-rundhalshemd-mit-schwarz-gerahmter-brille-C8Ta0gwPbQg?utm_content=creditShareLink&utm_medium=referral&utm_source=unsplash)
+- Craig McKay [Male picture 2](https://unsplash.com/de/fotos/graustufenfotografie-eines-mannes-der-ein-hemd-mit-rundhalsausschnitt-tragt-jmURdhtm7Ng?utm_content=creditShareLink&utm_medium=referral&utm_source=unsplash)
+      
